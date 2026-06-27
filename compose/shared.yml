@@ -22,8 +22,12 @@ services:
       - OTEL_METRICS_EXPORTER=none
       - OTEL_LOGS_EXPORTER=none
       - OTEL_TRACES_EXPORTER=none
-      - GOMAXPROCS=${BENCH_CPUS:-4}
-      - GOMEMLIMIT=${BENCH_MEMLIMIT:-3GiB}
+      - PPROF_ADDR=0.0.0.0:9010
+      # Unconstrained by default, like every other engine here (capping only
+      # oteldb made it the lone 4-core process on a 32-core box — a ~7x penalty).
+      # For a controlled run, cap ALL engines equally (see README "Fairness").
+      - GOMAXPROCS=${BENCH_CPUS:-}
+      - GOMEMLIMIT=${BENCH_MEMLIMIT:-}
     # No healthcheck: the oteldb image ships only the static binary (no wget/curl
     # to probe :13133/liveness). benchctl gates on the HTTP query API instead.
     ports:

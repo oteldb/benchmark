@@ -6,6 +6,9 @@
 storage:
   backend: file
   dir: /data
+  # Parallelize LogQL result materialization across workers (default 1 =
+  # sequential). Lets LogQL queries use multiple cores like Loki/qryn do.
+  log_query_parallelism: 8
 
 prometheus:                     # PromQL HTTP API (Prometheus-compatible)
   bind: 0.0.0.0:9090

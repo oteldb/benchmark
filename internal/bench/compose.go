@@ -9,14 +9,21 @@ import (
 
 // composeFiles is the full overlay: base + cross-signal + every lane. Compose
 // merges by service name, and profiles gate which lane services actually start.
+// The explicit --env-file is required: with -f pointing into compose/, Compose
+// sets the project directory there and would otherwise ignore the root .env.
 func (e *Env) composeFiles() []string {
 	c := filepath.Join(e.Dir, "compose")
 	var args []string
+	if env := filepath.Join(e.Dir, ".env"); fileExists(env) {
+		args = append(args, "--env-file", env)
+	}
 	for _, f := range []string{"base.yml", "shared.yml", "metrics.yml", "logs.yml", "traces.yml"} {
 		args = append(args, "-f", filepath.Join(c, f))
 	}
 	return args
 }
+
+func fileExists(p string) bool { _, err := os.Stat(p); return err == nil }
 
 func profilesFor(lane string) []string {
 	switch lane {
