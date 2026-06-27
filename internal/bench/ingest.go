@@ -1,11 +1,13 @@
 package bench
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
+	"syscall"
 	"time"
 )
 
@@ -57,13 +59,32 @@ func (e *Env) ingestMetrics() error {
 
 func (e *Env) ingestLogs() error {
 	fmt.Println(">> ingesting logs into otelcol-logs over OTLP")
-	args := []string{"otel", "logs", "bench", "--duration", "30s"}
+	args := []string{"run", "github.com/oteldb/oteldb/cmd/otelbench",
+		"otel", "logs", "bench", "--resources", "10", "--entries", "50", "--rate", "20ms"}
+	ctx := context.Background()
 	if e.LoghubDir != "" {
-		args = append(args[:3], append([]string{"--source", e.LoghubDir}, args[3:]...)...)
+		// loghub .log files: replay the dataset (terminates on exhaustion).
+		args = append(args, "--source", e.LoghubDir, "--repeat", "2")
 	} else {
+		// synthetic logs stream until cancelled; time-box them.
 		fmt.Println("   (LOGHUB_DIR unset -> synthetic logs; set it for the loghub suite to match)")
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
 	}
-	return e.otelbench(append(args, "localhost:4317")...)
+	args = append(args, "localhost:4317")
+	cmd := exec.CommandContext(ctx, "go", args...)
+	cmd.Dir = e.OteldbSrc
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	// `go run` execs otelbench as a grandchild; put it in its own process group
+	// and signal the whole group on timeout, else the streamer is orphaned.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+	err := cmd.Run()
+	if ctx.Err() == context.DeadlineExceeded {
+		return nil // expected: synthetic stream is time-boxed
+	}
+	return err
 }
 
 func (e *Env) ingestTraces() error {

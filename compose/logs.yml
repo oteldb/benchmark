@@ -21,6 +21,7 @@ services:
     image: grafana/loki:3.6.0
     profiles: [logs]
     networks: [bench]
+    user: root                  # named volume /loki is root-owned; compactor needs to mkdir
     depends_on:
       fs-init: { condition: service_completed_successfully }
     command: ["-config.file=/etc/loki/config.yml"]

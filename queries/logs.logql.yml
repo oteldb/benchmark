@@ -1,48 +1,50 @@
-# Canonical LogQL suite. Run against every logs system's Loki HTTP API.
-# Dataset: loghub logs ingested over OTLP (see scripts/ingest.sh).
-# Mirrors the best/mid/worst-case selectivity tiers from oteldb's loghub suite.
+# LogQL suite. Run against every logs system's Loki HTTP API.
+# Dataset: otelbench synthetic logs (service_name="unknown_service", level in
+# DEBUG/INFO/WARN/ERROR/FATAL/TRACE, JSON bodies with method/status/client_ip).
+# Set LOGHUB_DIR before ingest to replay real loghub data instead, then point this
+# file at the loghub selectors (service_name=ssh|apache|linux|...).
 kind: logs
 range:
-  lookback: 3600
-  step: 60
+  lookback: 300
+  step: 30
 queries:
-  - id: best_ssh_failed
-    title: "Best: SSH failed password"
+  - id: select_service
+    title: "Selector: all service lines"
     type: range
-    q: '{service_name="ssh"} |= "Failed password"'
-  - id: best_apache_regex
-    title: "Best: Apache request regex"
+    q: '{service_name="unknown_service"}'
+  - id: level_error
+    title: "Selector: ERROR level"
     type: range
-    q: '{service_name="apache"} |~ "GET .* HTTP/1\\.[01]"'
-  - id: best_chained
-    title: "Best: SSH chained filters"
-    type: range
-    q: '{service_name="ssh"} |= "Failed" |= "password" != "debug"'
-  - id: mid_error_token
-    title: "Mid: severity token lookup"
-    type: range
-    q: '{level="ERROR"} |= "error"'
-  - id: mid_warn
-    title: "Mid: WARN isolation"
+    q: '{level="ERROR"}'
+  - id: level_warn
+    title: "Selector: WARN level"
     type: range
     q: '{level="WARN"}'
-  - id: worst_token_scan
-    title: "Worst: full-table token scan"
+  - id: error_token
+    title: "Filter: ERROR + token"
     type: range
-    q: '{} |= "error"'
-  - id: worst_ip_regex
-    title: "Worst: full-table IP regex"
+    q: '{level="ERROR"} |= "method"'
+  - id: body_get
+    title: "Filter: body token GET"
     type: range
-    q: '{} |~ "\\d+\\.\\d+\\.\\d+\\.\\d+"'
-  - id: metric_lines_by_service
-    title: "Metric: lines by service"
+    q: '{service_name="unknown_service"} |= "GET"'
+  - id: status_regex
+    title: "Filter: 4xx status regex"
     type: range
-    q: 'sum by (service_name) (count_over_time({service_name=~"apache|ssh|linux"}[5m]))'
-  - id: metric_error_rate
-    title: "Metric: error rate by service"
+    q: '{service_name="unknown_service"} |~ "\"status\":4[0-9][0-9]"'
+  - id: json_status
+    title: "Parse: json status>=400"
     type: range
-    q: 'sum by (service_name) (rate({level="ERROR"}[5m]))'
-  - id: metric_topk
-    title: "Metric: top services by rate"
+    q: '{service_name="unknown_service"} | json | status>=400'
+  - id: lines_by_level
+    title: "Metric: lines by level"
     type: range
-    q: 'topk(3, sum by (service_name) (rate({service_name=~"apache|ssh|linux"}[5m])))'
+    q: 'sum by (level) (count_over_time({service_name="unknown_service"}[1m]))'
+  - id: rate_by_level
+    title: "Metric: rate by level"
+    type: range
+    q: 'sum by (level) (rate({service_name="unknown_service"}[1m]))'
+  - id: error_rate
+    title: "Metric: error rate"
+    type: range
+    q: 'sum(rate({level="ERROR"}[1m]))'
