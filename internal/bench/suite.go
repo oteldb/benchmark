@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -30,10 +31,29 @@ type Query struct {
 type Suite struct {
 	Kind  string `yaml:"kind"`
 	Range struct {
+		// Lookback is the window size in seconds back from "now" — used for
+		// live-generated datasets (logs/traces).
 		Lookback int `yaml:"lookback"`
-		Step     int `yaml:"step"`
+		// Start/End (RFC3339) pin an absolute window — used for static datasets
+		// like req.rwq whose timestamps are fixed. When set, they override Lookback.
+		Start string `yaml:"start"`
+		End   string `yaml:"end"`
+		Step  int    `yaml:"step"`
 	} `yaml:"range"`
 	Queries []Query `yaml:"queries"`
+}
+
+// Window returns the [start, end] epoch seconds for this suite: the absolute
+// Start/End if pinned, otherwise [now-Lookback, now].
+func (s *Suite) Window(now int64) (int64, int64) {
+	if s.Range.Start != "" && s.Range.End != "" {
+		st, err1 := time.Parse(time.RFC3339, s.Range.Start)
+		en, err2 := time.Parse(time.RFC3339, s.Range.End)
+		if err1 == nil && err2 == nil {
+			return st.Unix(), en.Unix()
+		}
+	}
+	return now - int64(s.Range.Lookback), now
 }
 
 // LoadSuite reads the canonical suite for a signal.

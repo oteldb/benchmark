@@ -19,8 +19,10 @@ tempo:                          # TraceQL HTTP API (Tempo-compatible)
 health_check:
   bind: 0.0.0.0:13133
 
-# Ingest receivers: Prometheus remote-write for metrics, OTLP for logs + traces.
-# The collectors in config/otelcol/ fan the canonical dataset out to here.
+# Ingest receivers: Prometheus remote-write for metrics (replayed directly),
+# OTLP for logs + traces (fanned out by config/otelcol/{logs,traces}.yml).
+# Under --embedded the oteldbexporter writes to the embedded storage engine, so
+# its DSN is ignored — but every pipeline must still name an exporter.
 otelcol:
   receivers:
     prometheusremotewrite:
@@ -32,8 +34,11 @@ otelcol:
           endpoint: 0.0.0.0:4317
         http:
           endpoint: 0.0.0.0:4318
+  exporters:
+    oteldbexporter:
+      dsn: clickhouse://default:default@clickhouse:9000   # ignored under --embedded
   service:
     pipelines:
-      metrics: { receivers: [prometheusremotewrite] }
-      logs:    { receivers: [otlp] }
-      traces:  { receivers: [otlp] }
+      metrics: { receivers: [prometheusremotewrite], exporters: [oteldbexporter] }
+      logs:    { receivers: [otlp], exporters: [oteldbexporter] }
+      traces:  { receivers: [otlp], exporters: [oteldbexporter] }

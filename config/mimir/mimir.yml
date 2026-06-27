@@ -2,6 +2,15 @@
 # One bucket (mimir) on the same fs instance Loki/Tempo/GreptimeDB/oteldb use.
 multitenancy_enabled: false
 
+# Single-node: one instance per ring, so replication factor must be 1 (the
+# default 3 makes the lone instance look like "too many unhealthy instances").
+ingester:
+  ring:
+    replication_factor: 1
+store_gateway:
+  sharding_ring:
+    replication_factor: 1
+
 common:
   storage:
     backend: s3
@@ -14,9 +23,10 @@ common:
       # path-style addressing (endpoint/bucket/key), which go-faster/fs serves
       bucket_lookup_type: path
 
+# One bucket (mimir), three distinct prefixes — Mimir rejects identical
+# (bucket, prefix) tuples across blocks/ruler/alertmanager storage.
 blocks_storage:
-  s3:
-    bucket_name: mimir
+  storage_prefix: blocks
   tsdb:
     dir: /data/tsdb
   bucket_store:
@@ -26,8 +36,10 @@ compactor:
   data_dir: /data/compactor
 
 ruler_storage:
-  backend: s3
-  s3: { bucket_name: mimir }
+  storage_prefix: ruler
+
+alertmanager_storage:
+  storage_prefix: alertmanager
 
 server:
   http_listen_port: 9009

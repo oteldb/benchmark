@@ -7,8 +7,10 @@
 #   queries[].type  range|instant
 #   queries[].q     the query string
 kind: metrics
+# Live data from the vmagent→node_exporter prewarm, so the window is relative to
+# now. lookback should be ≤ the prewarm duration (PREWARM env, default 90s).
 range:
-  lookback: 3600
+  lookback: 120
   step: 15
 queries:
   - id: count_cpu_cores

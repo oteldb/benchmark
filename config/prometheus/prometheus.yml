@@ -1,5 +1,6 @@
-# Prometheus only receives data via remote-write (from otelcol-metrics); no
-# scrape targets. Native local TSDB storage (--storage.tsdb.path=/data).
+# Prometheus only receives data via remote-write (from vmagent); no scrape
+# targets. Native local TSDB storage (--storage.tsdb.path=/data). Live data is
+# in-order with current timestamps, so no out-of-order window is needed.
 global:
   scrape_interval: 1m
 scrape_configs: []

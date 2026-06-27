@@ -84,9 +84,8 @@ func (e *Env) Query(signal string, count, warmup int) error {
 // timeRequest issues one query and returns its wall-clock latency in ms, reading
 // and discarding the body. ok=false on transport error or non-2xx.
 func (e *Env) timeRequest(c *http.Client, addr, lang, typ, q string, s *Suite) (float64, bool) {
-	now := time.Now().Unix()
-	start := now - int64(s.Range.Lookback)
-	u := buildURL(addr, lang, typ, q, start, now, s.Range.Step)
+	start, end := s.Window(time.Now().Unix())
+	u := buildURL(addr, lang, typ, q, start, end, s.Range.Step)
 	if u == "" {
 		return 0, false
 	}

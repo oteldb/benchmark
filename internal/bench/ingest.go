@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"time"
 )
 
 // Ingest pushes the canonical dataset once into the lane collector, which fans
@@ -33,20 +33,26 @@ func (e *Env) otelbench(args ...string) error {
 	return cmd.Run()
 }
 
+// ingestMetrics is a prewarm wait: vmagent already scrapes the multiplied
+// node_exporter targets and remote-writes the live stream to every engine from
+// the moment the lane is up. Here we just let data accumulate (current
+// timestamps, in order) so the query window has samples. Duration: PREWARM env
+// (default 90s).
 func (e *Env) ingestMetrics() error {
-	cache := filepath.Join(e.Dir, ".cache")
-	if err := os.MkdirAll(cache, 0o755); err != nil {
-		return err
-	}
-	rwq := filepath.Join(cache, "req.rwq")
-	if _, err := os.Stat(rwq); err != nil {
-		fmt.Println(">> downloading req.rwq")
-		if err := download("https://storage.yandexcloud.net/faster-public/oteldb/req.rwq", rwq); err != nil {
-			return fmt.Errorf("download req.rwq: %w", err)
+	prewarm := 90 * time.Second
+	if v := os.Getenv("PREWARM"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			prewarm = d
 		}
 	}
-	fmt.Println(">> replaying remote-write into otelcol-metrics (fan-out)")
-	return e.otelbench("promrw", "replay", "-i", rwq, "--target", "http://localhost:19291/api/v1/write")
+	fmt.Printf(">> prewarm: vmagent scraping node_exporter → all engines for %s\n", prewarm)
+	deadline := time.Now().Add(prewarm)
+	for time.Now().Before(deadline) {
+		time.Sleep(10 * time.Second)
+		fmt.Printf("   ... %.0fs remaining\n", time.Until(deadline).Seconds())
+	}
+	fmt.Println(">> prewarm done")
+	return nil
 }
 
 func (e *Env) ingestLogs() error {

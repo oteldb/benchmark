@@ -6,21 +6,39 @@ volumes:
   mimir-data:
   greptimedb-data:
 
+# Metrics generation + fan-out. node-exporter produces real metrics; vmagent
+# scrapes it as 10 synthetic hosts (config/vmagent/scrape.yml) and remote-writes
+# the live, current-timestamp, in-order, snappy stream to every engine — so each
+# ingests identical data with no static-dataset timestamp problems. `benchctl
+# ingest metrics` is just a prewarm wait while this runs.
 services:
-  otelcol-metrics:
-    image: otel/opentelemetry-collector-contrib:0.115.1
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    profiles: [metrics]
+    networks: [bench]
+    command: ["--web.max-requests=40"]
+
+  vmagent:
+    image: victoriametrics/vmagent:v1.106.1
     profiles: [metrics]
     networks: [bench]
     volumes:
-      - ../config/otelcol/metrics.yml:/etc/otelcol-contrib/config.yaml:ro
-    command: ["--config=/etc/otelcol-contrib/config.yaml"]
-    ports:
-      - "127.0.0.1:19291:19291"  # prometheus remote-write ingest endpoint (replay target)
+      - ../config/vmagent/scrape.yml:/etc/vmagent/scrape.yml:ro
+    command:
+      - -promscrape.config=/etc/vmagent/scrape.yml
+      - -remoteWrite.url=http://oteldb:19291/api/v1/write
+      - -remoteWrite.url=http://prometheus:9090/api/v1/write
+      - -remoteWrite.url=http://victoriametrics:8428/api/v1/write
+      - -remoteWrite.url=http://mimir:9009/api/v1/push
+      - -remoteWrite.url=http://greptimedb:4000/v1/prometheus/write
+      - -remoteWrite.url=http://gigapipe:3100/api/v1/prom/remote/write
+    ports: ["127.0.0.1:8429:8429"]
 
   prometheus:
     image: prom/prometheus:v3.4.1
     profiles: [metrics]
     networks: [bench]
+    user: root                  # named volume /data is root-owned; TSDB needs write
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --web.enable-remote-write-receiver
@@ -43,7 +61,7 @@ services:
 
   # Mimir monolithic, object storage on the shared go-faster/fs S3 (bucket: mimir).
   mimir:
-    image: grafana/mimir:2.14.2
+    image: grafana/mimir:3.1.2
     profiles: [metrics]
     networks: [bench]
     depends_on:

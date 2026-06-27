@@ -36,11 +36,13 @@ apples-to-apples comparison possible:
    VictoriaLogs, VictoriaTraces) and ClickHouse-backed (gigapipe) use their
    native storage and are labelled accordingly.
 
-2. **One dataset, fanned out.** Each lane runs **one** OpenTelemetry Collector
-   (`config/otelcol/<lane>.yml`) that ingests the canonical dataset **once** and
-   mirrors it byte-for-byte to every backend via the right protocol
-   (Prometheus remote-write for metrics, Loki push / OTLP for logs, OTLP for
-   traces). Every system therefore ingests *exactly the same data*.
+2. **One source, fanned out.** Each lane drives one generator that reaches every
+   backend identically. **Metrics:** a single `node-exporter` is scraped by
+   `vmagent` as 10 synthetic hosts (`config/vmagent/scrape.yml`) and remote-written
+   (standard snappy) to all six engines live — current timestamps, in order, so
+   there are no static-dataset timestamp problems. **Logs/traces:** one
+   OpenTelemetry Collector (`config/otelcol/<lane>.yml`) mirrors the OTLP stream to
+   every backend. Every engine therefore ingests *the same data*.
 
 3. **One query driver, many endpoints.** Every engine here speaks a
    *compatible HTTP query API* for its reference language (Prometheus
@@ -140,7 +142,10 @@ emits benchstat output) can be pointed at any `addr` from `systems.yml` — see
 - **Native dialects** (VictoriaLogs/VictoriaTraces) are best-effort translations
   in `queries/native/`; they measure the same retrieval work, not identical
   semantics. Queries with no equivalent report `n/a`.
-- **Datasets.** Metrics use real `node_exporter` data (`req.rwq`). Logs match
+- **Datasets.** Metrics are live `node_exporter` series multiplied to 10 hosts by
+  vmagent during a prewarm (`PREWARM` env, default 90s); some engines have PromQL
+  dialect gaps (e.g. GreptimeDB rejects `topk` and bare `{__name__=~...}`),
+  reported as `ERR`/empty. Logs match
   the loghub suite when `LOGHUB_DIR` is set, else synthetic. Traces are
   `telemetrygen` spans — swap in a richer generator and adjust
   `queries/traces.traceql.yml` for application-shaped traces.

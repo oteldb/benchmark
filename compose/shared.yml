@@ -11,10 +11,7 @@ volumes:
 
 services:
   oteldb:
-    image: ${OTELDB_IMAGE:-ghcr.io/oteldb/oteldb:latest}
-    build:
-      context: ../../oteldb
-      dockerfile: dev/deploy/deploy.Dockerfile
+    image: ${OTELDB_IMAGE:-ghcr.io/oteldb/oteldb:v0.41.0}
     command: ["--config=/etc/otel/cfg.yml", "--embedded"]
     networks: [bench]
     volumes:
@@ -27,16 +24,14 @@ services:
       - OTEL_TRACES_EXPORTER=none
       - GOMAXPROCS=${BENCH_CPUS:-4}
       - GOMEMLIMIT=${BENCH_MEMLIMIT:-3GiB}
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "127.0.0.1:13133/liveness"]
-      interval: 2s
-      timeout: 2s
-      retries: 60
+    # No healthcheck: the oteldb image ships only the static binary (no wget/curl
+    # to probe :13133/liveness). benchctl gates on the HTTP query API instead.
     ports:
       - "127.0.0.1:9090:9090"   # promql
       - "127.0.0.1:3100:3100"   # logql
       - "127.0.0.1:3200:3200"   # traceql
       - "127.0.0.1:9010:9010"   # pprof
+      - "127.0.0.1:19291:19291" # prometheus remote-write ingest
 
   # gigapipe/qryn — Loki+Prometheus+Tempo APIs over ClickHouse.
   clickhouse:

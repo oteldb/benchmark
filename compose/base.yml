@@ -51,7 +51,7 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        for b in oteldb mimir loki tempo greptimedb; do
+        for b in mimir loki tempo greptimedb; do
           aws --endpoint-url http://fs:9000 s3 mb "s3://$$b" 2>/dev/null || true
         done
         echo "buckets ready"
