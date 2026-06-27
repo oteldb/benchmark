@@ -1,0 +1,41 @@
+# logs.yml — LogQL lane. dedicated log stores + the fan-out collector.
+# Profile: logs.
+volumes:
+  loki-data:
+  victorialogs-data:
+
+services:
+  otelcol-logs:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    profiles: [logs]
+    networks: [bench]
+    volumes:
+      - ../config/otelcol/logs.yml:/etc/otelcol-contrib/config.yaml:ro
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    ports:
+      - "127.0.0.1:4317:4317"   # OTLP gRPC ingest (canonical log source target)
+      - "127.0.0.1:4318:4318"   # OTLP HTTP
+
+  # Loki single-binary, object storage on the shared go-faster/fs S3 (bucket: loki).
+  loki:
+    image: grafana/loki:3.6.0
+    profiles: [logs]
+    networks: [bench]
+    depends_on:
+      fs-init: { condition: service_completed_successfully }
+    command: ["-config.file=/etc/loki/config.yml"]
+    volumes:
+      - ../config/loki/loki.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    ports: ["127.0.0.1:3101:3100"]
+
+  victorialogs:
+    image: victoriametrics/victoria-logs:v1.0.0-victorialogs
+    profiles: [logs]
+    networks: [bench]
+    command:
+      - --storageDataPath=/data
+      - --retentionPeriod=100y
+    volumes:
+      - victorialogs-data:/data
+    ports: ["127.0.0.1:9428:9428"]

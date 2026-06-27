@@ -1,0 +1,48 @@
+# Canonical LogQL suite. Run against every logs system's Loki HTTP API.
+# Dataset: loghub logs ingested over OTLP (see scripts/ingest.sh).
+# Mirrors the best/mid/worst-case selectivity tiers from oteldb's loghub suite.
+kind: logs
+range:
+  lookback: 3600
+  step: 60
+queries:
+  - id: best_ssh_failed
+    title: "Best: SSH failed password"
+    type: range
+    q: '{service_name="ssh"} |= "Failed password"'
+  - id: best_apache_regex
+    title: "Best: Apache request regex"
+    type: range
+    q: '{service_name="apache"} |~ "GET .* HTTP/1\\.[01]"'
+  - id: best_chained
+    title: "Best: SSH chained filters"
+    type: range
+    q: '{service_name="ssh"} |= "Failed" |= "password" != "debug"'
+  - id: mid_error_token
+    title: "Mid: severity token lookup"
+    type: range
+    q: '{level="ERROR"} |= "error"'
+  - id: mid_warn
+    title: "Mid: WARN isolation"
+    type: range
+    q: '{level="WARN"}'
+  - id: worst_token_scan
+    title: "Worst: full-table token scan"
+    type: range
+    q: '{} |= "error"'
+  - id: worst_ip_regex
+    title: "Worst: full-table IP regex"
+    type: range
+    q: '{} |~ "\\d+\\.\\d+\\.\\d+\\.\\d+"'
+  - id: metric_lines_by_service
+    title: "Metric: lines by service"
+    type: range
+    q: 'sum by (service_name) (count_over_time({service_name=~"apache|ssh|linux"}[5m]))'
+  - id: metric_error_rate
+    title: "Metric: error rate by service"
+    type: range
+    q: 'sum by (service_name) (rate({level="ERROR"}[5m]))'
+  - id: metric_topk
+    title: "Metric: top services by rate"
+    type: range
+    q: 'topk(3, sum by (service_name) (rate({service_name=~"apache|ssh|linux"}[5m])))'

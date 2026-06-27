@@ -1,0 +1,36 @@
+# systems.yml — the benchmark matrix, encoded.
+#
+# Single source of truth for the HOST-SIDE tools (scripts/qbench.sh, collect.sh,
+# report.sh). `addr` is therefore the published 127.0.0.1 port, not the
+# docker-internal hostname (the fan-out collectors in config/otelcol/ and the
+# Grafana datasources run inside the `bench` network and use internal names).
+#
+# Per signal, each entry declares the query API endpoint to hit and the query
+# language actually exercised. Systems that do not implement a Grafana reference
+# language (PromQL/LogQL/TraceQL) are benched on their native dialect against the
+# same dataset + hardware + ingest path; `apples: false` flags that the numbers
+# are dataset/hardware-comparable but NOT query-semantics-comparable.
+#
+# storage: `fs` = pointed at the shared go-faster/fs S3 server (one bucket each —
+# the apples-to-apples object-store group). `local` = native on-disk format.
+# `clickhouse` = requires a ClickHouse backend (gigapipe/qryn).
+
+metrics:                         # reference language: PromQL (Prometheus HTTP API /api/v1)
+  oteldb:          { addr: http://127.0.0.1:9090,                 lang: promql, apples: true,  storage: fs }
+  prometheus:      { addr: http://127.0.0.1:9091,                 lang: promql, apples: true,  storage: local }
+  victoriametrics: { addr: http://127.0.0.1:8428/prometheus,      lang: promql, apples: true,  storage: local }
+  mimir:           { addr: http://127.0.0.1:9009/prometheus,      lang: promql, apples: true,  storage: fs }
+  greptimedb:      { addr: http://127.0.0.1:4000/v1/prometheus,   lang: promql, apples: true,  storage: fs }
+  gigapipe:        { addr: http://127.0.0.1:3110,                 lang: promql, apples: true,  storage: clickhouse }
+
+logs:                            # reference language: LogQL (Loki HTTP API /loki/api/v1)
+  oteldb:          { addr: http://127.0.0.1:3100,  lang: logql,  apples: true,  storage: fs }
+  loki:            { addr: http://127.0.0.1:3101,  lang: logql,  apples: true,  storage: fs }
+  victorialogs:    { addr: http://127.0.0.1:9428,  lang: logsql, apples: false, storage: local }   # native LogsQL
+  gigapipe:        { addr: http://127.0.0.1:3110,  lang: logql,  apples: true,  storage: clickhouse }
+
+traces:                          # reference language: TraceQL (Tempo HTTP API /api/search)
+  oteldb:          { addr: http://127.0.0.1:3200,   lang: traceql, apples: true,  storage: fs }
+  tempo:           { addr: http://127.0.0.1:3201,   lang: traceql, apples: true,  storage: fs }
+  victoriatraces:  { addr: http://127.0.0.1:10428,  lang: native,  apples: false, storage: local }  # Jaeger query API
+  gigapipe:        { addr: http://127.0.0.1:3110,   lang: traceql, apples: true,  storage: clickhouse }

@@ -1,0 +1,39 @@
+# oteldb under test, serving all three signals from the embedded storage engine.
+# Run with --embedded (see compose/shared.yml), which routes metrics/logs/traces
+# to the github.com/oteldb/storage engine. The engine's `file` backend writes to
+# the mounted /data volume; the same engine speaks S3 to the shared go-faster/fs
+# server in production (storage/backend/s3) — see README "Storage substrate".
+storage:
+  backend: file
+  dir: /data
+
+prometheus:                     # PromQL HTTP API (Prometheus-compatible)
+  bind: 0.0.0.0:9090
+  max_samples: 1_000_000
+  timeout: 1m
+  enable_negative_offset: true
+loki:                           # LogQL HTTP API (Loki-compatible)
+  bind: 0.0.0.0:3100
+tempo:                          # TraceQL HTTP API (Tempo-compatible)
+  bind: 0.0.0.0:3200
+health_check:
+  bind: 0.0.0.0:13133
+
+# Ingest receivers: Prometheus remote-write for metrics, OTLP for logs + traces.
+# The collectors in config/otelcol/ fan the canonical dataset out to here.
+otelcol:
+  receivers:
+    prometheusremotewrite:
+      endpoint: 0.0.0.0:19291
+      time_threshold: 100000h
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  service:
+    pipelines:
+      metrics: { receivers: [prometheusremotewrite] }
+      logs:    { receivers: [otlp] }
+      traces:  { receivers: [otlp] }

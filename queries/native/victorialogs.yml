@@ -1,0 +1,28 @@
+# VictoriaLogs does not implement LogQL; it has its own LogsQL. These are the
+# closest LogsQL equivalents of the canonical logs.logql.yml queries, matched by
+# id so the report aligns rows. Queried via GET /select/logsql/query?query=...
+# Results are NOT query-semantics-identical to LogQL (apples=false in systems.yml),
+# but run over the same dataset, hardware and ingest path.
+system: victorialogs
+api: logsql
+queries:
+  - id: best_ssh_failed
+    q: 'service_name:=ssh AND "Failed password"'
+  - id: best_apache_regex
+    q: 'service_name:=apache AND _msg:~"GET .* HTTP/1\\.[01]"'
+  - id: best_chained
+    q: 'service_name:=ssh AND "Failed" AND "password" AND NOT "debug"'
+  - id: mid_error_token
+    q: 'level:=ERROR AND "error"'
+  - id: mid_warn
+    q: 'level:=WARN'
+  - id: worst_token_scan
+    q: '"error"'
+  - id: worst_ip_regex
+    q: '_msg:~"\\d+\\.\\d+\\.\\d+\\.\\d+"'
+  - id: metric_lines_by_service
+    q: 'service_name:in(apache,ssh,linux) | stats by (service_name) count() lines'
+  - id: metric_error_rate
+    q: 'level:=ERROR | stats by (service_name) count() lines'
+  - id: metric_topk
+    q: 'service_name:in(apache,ssh,linux) | stats by (service_name) count() lines | sort by (lines desc) limit 3'

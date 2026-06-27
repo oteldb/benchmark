@@ -1,0 +1,39 @@
+# Loki single-binary, chunk + index storage on the shared go-faster/fs S3.
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  log_level: warn
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  replication_factor: 1
+  ring:
+    kvstore: { store: inmemory }
+  storage:
+    s3:
+      endpoint: fs:9000
+      bucketnames: loki
+      access_key_id: bench
+      secret_access_key: benchbench
+      s3forcepathstyle: true
+      insecure: true
+
+schema_config:
+  configs:
+    - from: 2020-01-01
+      store: tsdb
+      object_store: s3
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  allow_structured_metadata: true
+  ingestion_rate_mb: 1024
+  ingestion_burst_size_mb: 2048
+  reject_old_samples: false
+  retention_period: 0s
+  volume_enabled: true

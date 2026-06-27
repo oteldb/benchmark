@@ -1,0 +1,45 @@
+# Canonical PromQL suite. Run against every metrics system's Prometheus HTTP API.
+# Dataset: node_exporter metrics replayed from req.rwq (see scripts/ingest.sh).
+# Schema consumed by scripts/qbench.sh:
+#   kind            metrics|logs|traces  -> HTTP API family
+#   range.lookback  seconds back from "now" the query window spans
+#   range.step      step seconds for range queries
+#   queries[].type  range|instant
+#   queries[].q     the query string
+kind: metrics
+range:
+  lookback: 3600
+  step: 15
+queries:
+  - id: count_cpu_cores
+    title: Count CPU cores
+    type: instant
+    q: count(count(node_cpu_seconds_total{job="node_exporter"}) by (cpu))
+  - id: cpu_usage
+    title: CPU usage ratio
+    type: range
+    q: sum by(instance) (irate(node_cpu_seconds_total{job="node_exporter",mode="user"}[1m])) / on(instance) group_left sum by(instance) (irate(node_cpu_seconds_total{job="node_exporter"}[1m]))
+  - id: cpu_wait
+    title: CPU wait time
+    type: range
+    q: irate(node_schedstat_waiting_seconds_total{job="node_exporter"}[1m])
+  - id: topk_free_mem
+    title: Top 3 free memory
+    type: instant
+    q: topk(3, avg_over_time(node_memory_MemFree_bytes{job="node_exporter"}[30m]))
+  - id: rate_network
+    title: Network receive rate
+    type: range
+    q: sum by(instance) (rate(node_network_receive_bytes_total{job="node_exporter"}[5m]))
+  - id: disk_io
+    title: Disk read bytes rate
+    type: range
+    q: sum by(instance,device) (rate(node_disk_read_bytes_total{job="node_exporter"}[5m]))
+  - id: load_quantile
+    title: Load1 0.99 quantile over time
+    type: instant
+    q: quantile_over_time(0.99, node_load1{job="node_exporter"}[1h])
+  - id: full_scan_count
+    title: Worst case full series count
+    type: instant
+    q: count({__name__=~"node_.+"})

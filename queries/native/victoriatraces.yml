@@ -1,0 +1,18 @@
+# VictoriaTraces exposes the Jaeger query API rather than TraceQL. These map the
+# canonical traces.traceql.yml queries (by id) onto Jaeger query params, hit via
+# GET /select/jaeger/api/traces?<params>. apples=false in systems.yml. Queries
+# that have no Jaeger equivalent (e.g. structural >>) are omitted and reported
+# as "n/a" for this system.
+system: victoriatraces
+api: jaeger
+queries:
+  - id: by_service
+    params: 'service=frontend'
+  - id: by_duration
+    params: 'service=frontend&minDuration=100ms'
+  - id: by_status_error
+    params: 'service=frontend&tags=%7B%22error%22%3A%22true%22%7D'
+  - id: by_attr
+    params: 'service=frontend&tags=%7B%22http.method%22%3A%22GET%22%7D'
+  - id: by_service_and_duration
+    params: 'service=backend&minDuration=50ms'

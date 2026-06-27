@@ -1,0 +1,19 @@
+# Provisioned datasources for eyeballing results in Grafana (http://localhost:3000).
+# Every system that speaks a Grafana-native query language is wired up.
+apiVersion: 1
+datasources:
+  # --- PromQL ---
+  - { name: oteldb-promql,    type: prometheus, access: proxy, url: http://oteldb:9090 }
+  - { name: prometheus,       type: prometheus, access: proxy, url: http://prometheus:9090 }
+  - { name: victoriametrics,  type: prometheus, access: proxy, url: http://victoriametrics:8428/prometheus }
+  - { name: mimir,            type: prometheus, access: proxy, url: http://mimir:9009/prometheus }
+  - { name: greptimedb,       type: prometheus, access: proxy, url: http://greptimedb:4000/v1/prometheus }
+  - { name: gigapipe-promql,  type: prometheus, access: proxy, url: http://gigapipe:3100 }
+  # --- LogQL ---
+  - { name: oteldb-logql,     type: loki, access: proxy, url: http://oteldb:3100 }
+  - { name: loki,             type: loki, access: proxy, url: http://loki:3100 }
+  - { name: gigapipe-logql,   type: loki, access: proxy, url: http://gigapipe:3100 }
+  # --- TraceQL ---
+  - { name: oteldb-traceql,   type: tempo, access: proxy, url: http://oteldb:3200 }
+  - { name: tempo,            type: tempo, access: proxy, url: http://tempo:3200 }
+  - { name: gigapipe-traceql, type: tempo, access: proxy, url: http://gigapipe:3100 }

@@ -1,0 +1,67 @@
+# shared.yml — cross-signal services included in every lane.
+#
+# oteldb (the system under test) and gigapipe/qryn both serve metrics, logs and
+# traces from a single binary, so they live here rather than being duplicated
+# per lane. Lane collectors (config/otelcol/<lane>.yml) always fan out to these
+# plus the lane's dedicated systems.
+
+volumes:
+  oteldb-data:
+  clickhouse-data:
+
+services:
+  oteldb:
+    image: ${OTELDB_IMAGE:-ghcr.io/oteldb/oteldb:latest}
+    build:
+      context: ../../oteldb
+      dockerfile: dev/deploy/deploy.Dockerfile
+    command: ["--config=/etc/otel/cfg.yml", "--embedded"]
+    networks: [bench]
+    volumes:
+      - ../config/oteldb/oteldb.yml:/etc/otel/cfg.yml:ro
+      - oteldb-data:/data
+    environment:
+      - OTEL_LOG_LEVEL=info
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
+      - OTEL_TRACES_EXPORTER=none
+      - GOMAXPROCS=${BENCH_CPUS:-4}
+      - GOMEMLIMIT=${BENCH_MEMLIMIT:-3GiB}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "127.0.0.1:13133/liveness"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+    ports:
+      - "127.0.0.1:9090:9090"   # promql
+      - "127.0.0.1:3100:3100"   # logql
+      - "127.0.0.1:3200:3200"   # traceql
+      - "127.0.0.1:9010:9010"   # pprof
+
+  # gigapipe/qryn — Loki+Prometheus+Tempo APIs over ClickHouse.
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.9
+    networks: [bench]
+    environment:
+      - CLICKHOUSE_PASSWORD=default
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "127.0.0.1:8123/ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  gigapipe:
+    image: ${GIGAPIPE_IMAGE:-ghcr.io/metrico/gigapipe:latest}
+    networks: [bench]
+    depends_on:
+      clickhouse: { condition: service_healthy }
+    environment:
+      - CLICKHOUSE_SERVER=clickhouse
+      - CLICKHOUSE_PORT=9000
+      - CLICKHOUSE_AUTH=default:default
+      - CLICKHOUSE_DB=qryn
+      - PORT=3100
+    ports:
+      - "127.0.0.1:3110:3100"   # prom + loki APIs

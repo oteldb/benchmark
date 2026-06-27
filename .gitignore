@@ -1,0 +1,8 @@
+.env
+.cache/
+/benchctl
+.idea/
+results/*/
+results/*.csv
+results/REPORT.md
+!results/.gitkeep

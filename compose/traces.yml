@@ -1,0 +1,40 @@
+# traces.yml — TraceQL lane. dedicated trace stores + the fan-out collector.
+# Profile: traces.
+volumes:
+  tempo-data:
+  victoriatraces-data:
+
+services:
+  otelcol-traces:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    profiles: [traces]
+    networks: [bench]
+    volumes:
+      - ../config/otelcol/traces.yml:/etc/otelcol-contrib/config.yaml:ro
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    ports:
+      - "127.0.0.1:4327:4317"   # OTLP gRPC ingest (canonical trace source target)
+
+  # Tempo single-binary, object storage on the shared go-faster/fs S3 (bucket: tempo).
+  tempo:
+    image: grafana/tempo:2.9.1
+    profiles: [traces]
+    networks: [bench]
+    depends_on:
+      fs-init: { condition: service_completed_successfully }
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ../config/tempo/tempo.yml:/etc/tempo.yml:ro
+      - tempo-data:/var/tempo
+    ports: ["127.0.0.1:3201:3200"]
+
+  victoriatraces:
+    image: victoriametrics/victoria-traces:latest
+    profiles: [traces]
+    networks: [bench]
+    command:
+      - --storageDataPath=/data
+      - --retentionPeriod=100y
+    volumes:
+      - victoriatraces-data:/data
+    ports: ["127.0.0.1:10428:10428"]

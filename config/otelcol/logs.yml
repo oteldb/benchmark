@@ -1,0 +1,36 @@
+# Logs fan-out. Receives the canonical log stream once over OTLP and mirrors it
+# to every log backend. oteldb and VictoriaLogs take OTLP directly; Loki and
+# gigapipe take the Loki push API via the loki exporter.
+receivers:
+  otlp:
+    protocols:
+      grpc: { endpoint: 0.0.0.0:4317 }
+      http: { endpoint: 0.0.0.0:4318 }
+
+processors:
+  batch: {}
+
+exporters:
+  otlp/oteldb:
+    endpoint: oteldb:4317
+    tls: { insecure: true }
+  otlphttp/victorialogs:
+    logs_endpoint: http://victorialogs:9428/insert/opentelemetry/v1/logs
+    tls: { insecure: true }
+  loki/loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    tls: { insecure: true }
+  loki/gigapipe:
+    endpoint: http://gigapipe:3100/loki/api/v1/push
+    tls: { insecure: true }
+
+service:
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters:
+        - otlp/oteldb
+        - otlphttp/victorialogs
+        - loki/loki
+        - loki/gigapipe

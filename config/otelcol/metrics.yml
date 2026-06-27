@@ -1,0 +1,46 @@
+# Metrics fan-out. Receives the canonical metric stream once (OTLP from a
+# generator, or Prometheus remote-write replayed by `otelbench promrw replay`)
+# and mirrors it byte-for-byte to every metric backend via remote-write, so
+# each system ingests identical data. A failing exporter does not stop the rest.
+receivers:
+  otlp:
+    protocols:
+      grpc: { endpoint: 0.0.0.0:4317 }
+  prometheusremotewrite:
+    endpoint: 0.0.0.0:19291
+
+processors:
+  batch: {}
+
+exporters:
+  prometheusremotewrite/oteldb:
+    endpoint: http://oteldb:19291/api/v1/write
+    tls: { insecure: true }
+  prometheusremotewrite/prometheus:
+    endpoint: http://prometheus:9090/api/v1/write
+    tls: { insecure: true }
+  prometheusremotewrite/victoriametrics:
+    endpoint: http://victoriametrics:8428/api/v1/write
+    tls: { insecure: true }
+  prometheusremotewrite/mimir:
+    endpoint: http://mimir:9009/api/v1/push
+    tls: { insecure: true }
+  prometheusremotewrite/greptimedb:
+    endpoint: http://greptimedb:4000/v1/prometheus/write
+    tls: { insecure: true }
+  prometheusremotewrite/gigapipe:
+    endpoint: http://gigapipe:3100/api/v1/prom/remote/write
+    tls: { insecure: true }
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp, prometheusremotewrite]
+      processors: [batch]
+      exporters:
+        - prometheusremotewrite/oteldb
+        - prometheusremotewrite/prometheus
+        - prometheusremotewrite/victoriametrics
+        - prometheusremotewrite/mimir
+        - prometheusremotewrite/greptimedb
+        - prometheusremotewrite/gigapipe

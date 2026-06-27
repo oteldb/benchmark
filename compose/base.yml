@@ -1,0 +1,84 @@
+# base.yml — shared substrate for every lane.
+#
+#   docker compose -f compose/base.yml -f compose/<lane>.yml --profile <lane> up
+#
+# Always-on services: the go-faster/fs S3 server (the common object store), a
+# bucket bootstrapper, cAdvisor (per-container CPU/RAM/IO for the footprint
+# report), and Grafana (eyeballing). Per-lane OTel Collectors live in the lane
+# files so an unused lane never starts a collector with dead exporters.
+
+name: oteldb-bench
+
+networks:
+  bench:
+    name: bench
+
+volumes:
+  fs-data:        # go-faster/fs filesystem root, holds every system's S3 bucket
+  grafana:
+
+services:
+  # Shared S3 object store. Every object-store-native system (oteldb, mimir,
+  # loki, tempo, greptimedb) gets its own bucket here, so the durability
+  # substrate is identical across the apples-to-apples group.
+  fs:
+    image: ${FS_IMAGE:-ghcr.io/go-faster/fs:latest}
+    # Fallback if the image is unavailable: build from source.
+    # build: { context: "https://github.com/go-faster/fs.git" }
+    command: ["s3", "--addr", ":9000", "--root", "/data/s3"]
+    networks: [bench]
+    volumes:
+      - fs-data:/data/s3
+    ports:
+      - "127.0.0.1:9000:9000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "127.0.0.1:9000/"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  # Creates one bucket per object-store-native system. S3 path-style addressing,
+  # static credentials shared by all systems (see .env).
+  fs-init:
+    image: amazon/aws-cli:2.17.0
+    depends_on:
+      fs: { condition: service_healthy }
+    networks: [bench]
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-bench}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-benchbench}
+      AWS_REGION: ${S3_REGION:-us-east-1}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        for b in oteldb mimir loki tempo greptimedb; do
+          aws --endpoint-url http://fs:9000 s3 mb "s3://$$b" 2>/dev/null || true
+        done
+        echo "buckets ready"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    networks: [bench]
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "127.0.0.1:8085:8080"
+
+  grafana:
+    image: grafana/grafana-oss:12.3.1
+    networks: [bench]
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    volumes:
+      - grafana:/var/lib/grafana
+      - ../config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    ports:
+      - "127.0.0.1:3000:3000"

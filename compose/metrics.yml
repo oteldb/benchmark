@@ -1,0 +1,74 @@
+# metrics.yml — PromQL lane. dedicated metric stores + the fan-out collector.
+# Profile: metrics.   docker compose ... --profile metrics
+volumes:
+  prometheus-data:
+  victoriametrics-data:
+  mimir-data:
+  greptimedb-data:
+
+services:
+  otelcol-metrics:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    profiles: [metrics]
+    networks: [bench]
+    volumes:
+      - ../config/otelcol/metrics.yml:/etc/otelcol-contrib/config.yaml:ro
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    ports:
+      - "127.0.0.1:19291:19291"  # prometheus remote-write ingest endpoint (replay target)
+
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    profiles: [metrics]
+    networks: [bench]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --storage.tsdb.path=/data
+    volumes:
+      - ../config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/data
+    ports: ["127.0.0.1:9091:9090"]
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.106.1
+    profiles: [metrics]
+    networks: [bench]
+    command:
+      - --storageDataPath=/data
+      - --retentionPeriod=100y
+    volumes:
+      - victoriametrics-data:/data
+    ports: ["127.0.0.1:8428:8428"]
+
+  # Mimir monolithic, object storage on the shared go-faster/fs S3 (bucket: mimir).
+  mimir:
+    image: grafana/mimir:2.14.2
+    profiles: [metrics]
+    networks: [bench]
+    depends_on:
+      fs-init: { condition: service_completed_successfully }
+    command:
+      - -config.file=/etc/mimir/mimir.yml
+      - -target=all
+      - -auth.multitenancy-enabled=false
+    volumes:
+      - ../config/mimir/mimir.yml:/etc/mimir/mimir.yml:ro
+      - mimir-data:/data
+    ports: ["127.0.0.1:9009:9009"]
+
+  # GreptimeDB standalone, object storage on go-faster/fs S3 (bucket: greptimedb).
+  greptimedb:
+    image: greptime/greptimedb:v0.11.0
+    profiles: [metrics]
+    networks: [bench]
+    depends_on:
+      fs-init: { condition: service_completed_successfully }
+    command:
+      - standalone
+      - start
+      - --config-file=/etc/greptimedb/config.toml
+    volumes:
+      - ../config/greptimedb/config.toml:/etc/greptimedb/config.toml:ro
+      - greptimedb-data:/data
+    ports: ["127.0.0.1:4000:4000"]

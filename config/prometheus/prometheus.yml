@@ -1,0 +1,5 @@
+# Prometheus only receives data via remote-write (from otelcol-metrics); no
+# scrape targets. Native local TSDB storage (--storage.tsdb.path=/data).
+global:
+  scrape_interval: 1m
+scrape_configs: []

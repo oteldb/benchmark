@@ -1,0 +1,33 @@
+# Canonical TraceQL suite. Run against every traces system's Tempo search API
+# (GET /api/search?q=<traceql>). Dataset: spans from telemetrygen (scripts/
+# ingest.sh) — service "frontend" with child spans, span names okey-dokey/lets-go,
+# net.peer.ip attributes. Swap in a richer generator (e.g. xk6-client-tracing)
+# and adjust these matchers for a more application-shaped trace dataset.
+kind: traces
+range:
+  lookback: 3600
+queries:
+  - id: by_service
+    title: "By service name"
+    type: search
+    q: '{ resource.service.name = "frontend" }'
+  - id: any_span
+    title: "Any span (worst case)"
+    type: search
+    q: '{ }'
+  - id: by_duration
+    title: "Spans slower than 1ms"
+    type: search
+    q: '{ duration > 1ms }'
+  - id: by_span_name
+    title: "By span name"
+    type: search
+    q: '{ name = "okey-dokey-0" }'
+  - id: by_attr
+    title: "Attribute present"
+    type: search
+    q: '{ span.net.peer.ip != "" }'
+  - id: structural
+    title: "Structural: parent calling child"
+    type: search
+    q: '{ resource.service.name = "frontend" } >> { }'

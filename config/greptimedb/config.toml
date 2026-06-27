@@ -1,0 +1,18 @@
+# GreptimeDB standalone, object storage on the shared go-faster/fs S3.
+# PromQL is served at :4000/v1/prometheus; remote-write at /v1/prometheus/write.
+[http]
+addr = "0.0.0.0:4000"
+
+[storage]
+type = "S3"
+bucket = "greptimedb"
+root = "greptimedb"
+endpoint = "http://fs:9000"
+region = "us-east-1"
+access_key_id = "bench"
+secret_access_key = "benchbench"
+enable_virtual_host_style = false   # path-style for go-faster/fs
+
+[wal]
+provider = "raft_engine"
+dir = "/data/wal"

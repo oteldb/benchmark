@@ -1,0 +1,29 @@
+# Thin wrapper over the benchctl Go CLI (cmd/benchctl). Everything here also
+# works as plain `go run ./cmd/benchctl <cmd>` — Task is just for convenience.
+# Requires: docker (+compose v2), Go. Go also drives ingest (otelbench from ../oteldb).
+version: "3"
+
+vars:
+  CTL: "go run ./cmd/benchctl"
+
+tasks:
+  default:
+    cmds: [task --list]
+
+  build:   { desc: "Compile the benchctl binary to ./benchctl", cmds: ["go build -o benchctl ./cmd/benchctl"] }
+
+  up:      { desc: "Start a lane (LANE=metrics|logs|traces|all)", cmds: ["{{.CTL}} up {{.LANE | default \"all\"}}"] }
+  down:    { desc: "Stop everything and wipe volumes", cmds: ["{{.CTL}} down"] }
+
+  ingest:  { desc: "Ingest canonical dataset for a lane (LANE=...)", cmds: ["{{.CTL}} ingest {{.LANE}}"] }
+  query:   { desc: "Run the query benchmark for a lane (LANE=..., RUNS=...)", cmds: ["{{.CTL}} query {{.LANE}} {{.RUNS | default 20}}"] }
+  collect: { desc: "Capture storage + memory footprint", cmds: ["{{.CTL}} collect"] }
+  report:  { desc: "Build results/REPORT.md", cmds: ["{{.CTL}} report"] }
+
+  bench:
+    desc: "Full run for one lane (LANE=metrics|logs|traces)"
+    cmds: ["{{.CTL}} bench {{.LANE}} {{.RUNS | default 20}}"]
+
+  bench:all:
+    desc: "Run all three lanes and build the report"
+    cmds: ["{{.CTL}} bench-all {{.RUNS | default 20}}"]

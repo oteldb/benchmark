@@ -1,0 +1,40 @@
+# Mimir monolithic, blocks storage on the shared go-faster/fs S3 server.
+# One bucket (mimir) on the same fs instance Loki/Tempo/GreptimeDB/oteldb use.
+multitenancy_enabled: false
+
+common:
+  storage:
+    backend: s3
+    s3:
+      endpoint: fs:9000
+      bucket_name: mimir
+      access_key_id: bench
+      secret_access_key: benchbench
+      insecure: true            # plain HTTP to fs
+      # path-style addressing (endpoint/bucket/key), which go-faster/fs serves
+      bucket_lookup_type: path
+
+blocks_storage:
+  s3:
+    bucket_name: mimir
+  tsdb:
+    dir: /data/tsdb
+  bucket_store:
+    sync_dir: /data/tsdb-sync
+
+compactor:
+  data_dir: /data/compactor
+
+ruler_storage:
+  backend: s3
+  s3: { bucket_name: mimir }
+
+server:
+  http_listen_port: 9009
+  log_level: warn
+
+limits:
+  ingestion_rate: 1000000
+  ingestion_burst_size: 2000000
+  max_global_series_per_user: 0
+  out_of_order_time_window: 100h
