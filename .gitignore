@@ -6,3 +6,6 @@ results/*/
 results/*.csv
 results/REPORT.md
 !results/.gitkeep
+!results/pprof/
+results/pprof/*.pb.gz
+results/pprof/*.bin
