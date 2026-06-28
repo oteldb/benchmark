@@ -7,16 +7,28 @@ volumes:
   greptimedb-data:
 
 # Metrics generation + fan-out. node-exporter produces real metrics; vmagent
-# scrapes it as 10 synthetic hosts (config/vmagent/scrape.yml) and remote-writes
-# the live, current-timestamp, in-order, snappy stream to every engine — so each
-# ingests identical data with no static-dataset timestamp problems. `benchctl
-# ingest metrics` is just a prewarm wait while this runs.
+# scrapes it as BENCH_NODES synthetic hosts (config/vmagent/scrape.yml, generated
+# by benchctl) and remote-writes the live, current-timestamp, in-order, snappy
+# stream to every engine — so each ingests identical data with no static-dataset
+# timestamp problems. `benchctl ingest metrics` is just a prewarm wait while this runs.
 services:
   node-exporter:
     image: prom/node-exporter:v1.8.2
     profiles: [metrics]
     networks: [bench]
     command: ["--web.max-requests=40"]
+
+  # Caching proxy between vmagent and node-exporter. vmagent's BENCH_NODES synthetic
+  # hosts all target node-cache:9100; it serves them one cached node-exporter response
+  # and refreshes node-exporter at most every ~2s, so the host count scales to thousands
+  # without melting the single exporter. See config/nginx/node-cache.conf.
+  node-cache:
+    image: nginx:1.27-alpine
+    profiles: [metrics]
+    networks: [bench]
+    depends_on: [node-exporter]
+    volumes:
+      - ../config/nginx/node-cache.conf:/etc/nginx/nginx.conf:ro
 
   vmagent:
     image: victoriametrics/vmagent:v1.106.1

@@ -21,6 +21,12 @@ type Env struct {
 	Runs      int             // benchmark runs per query (after warmup)
 	LoghubDir string          // optional dir of loghub .log files for the LogQL suite
 	Only      map[string]bool // if non-empty, restrict the run to these systems (e.g. {"oteldb"})
+	Nodes     int             // synthetic node_exporter hosts vmagent scrapes (metrics cardinality)
+
+	// ScrapeInterval overrides vmagent's scrape interval (e.g. "15s"). Empty = auto:
+	// the interval scales with Nodes so the single shared node-exporter is not asked
+	// for more full collections per second than it can serve (all hosts hit one target).
+	ScrapeInterval string
 }
 
 // LoadEnv finds the benchmark root (the dir containing systems.yml, walking up
@@ -52,6 +58,14 @@ func LoadEnv() (*Env, error) {
 	if v := get("BENCH_RUNS", ""); v != "" {
 		fmt.Sscanf(v, "%d", &e.Runs)
 	}
+	e.Nodes = 10
+	if v := get("BENCH_NODES", ""); v != "" {
+		fmt.Sscanf(v, "%d", &e.Nodes)
+	}
+	if e.Nodes < 1 {
+		e.Nodes = 1
+	}
+	e.ScrapeInterval = get("BENCH_SCRAPE_INTERVAL", "")
 	e.LoghubDir = get("LOGHUB_DIR", "")
 	e.Only = ParseOnly(get("BENCH_ONLY", ""))
 	return e, nil
