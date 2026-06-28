@@ -14,6 +14,9 @@ exporters:
   otlp/oteldb:
     endpoint: oteldb:4317
     tls: { insecure: true }
+  otlp/oteldb-ch:
+    endpoint: oteldb-ch:4317
+    tls: { insecure: true }
   otlphttp/victorialogs:
     logs_endpoint: http://victorialogs:9428/insert/opentelemetry/v1/logs
     tls: { insecure: true }
@@ -31,6 +34,7 @@ service:
       processors: [batch]
       exporters:
         - otlp/oteldb
+        - otlp/oteldb-ch
         - otlphttp/victorialogs
         - loki/loki
         - loki/gigapipe

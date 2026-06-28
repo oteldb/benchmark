@@ -32,7 +32,7 @@ func (e *Env) Query(signal string, count, warmup int) error {
 	}
 	client := &http.Client{Timeout: 120 * time.Second}
 
-	for _, sys := range systems.For(signal) {
+	for _, sys := range e.selected(systems.For(signal)) {
 		native, err := LoadNative(e.Dir, sys.Name)
 		if err != nil {
 			return err

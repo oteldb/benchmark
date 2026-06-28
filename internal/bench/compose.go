@@ -46,10 +46,35 @@ func (e *Env) compose(lane string, args ...string) error {
 	return cmd.Run()
 }
 
-// Up builds and starts a lane (or "all").
+// laneDrivers are the ingest-side services every engine in a lane shares (the
+// fan-out collector / scraper). They feed the same data to all backends, so the
+// Only mode keeps just these plus the selected engines.
+var laneDrivers = map[string][]string{
+	"metrics": {"node-exporter", "vmagent"},
+	"logs":    {"otelcol-logs"},
+	"traces":  {"otelcol-traces"},
+}
+
+// engineDeps are non-engine services a given engine needs beyond the lane
+// driver. oteldb's file backend is self-contained, so it has none.
+var engineDeps = map[string][]string{
+	"oteldb-ch":  {"clickhouse-oteldb"},
+	"gigapipe":   {"clickhouse"},
+	"mimir":      {"fs", "fs-init"},
+	"greptimedb": {"fs", "fs-init"},
+	"loki":       {"fs", "fs-init"},
+	"tempo":      {"fs", "fs-init"},
+}
+
+// Up builds and starts a lane (or "all"). With Env.Only set it brings up just
+// the selected engines plus the lane's ingest driver — a much faster loop than
+// the full matrix (the driver still fans data out to whatever is up).
 func (e *Env) Up(lane string) error {
 	if profilesFor(lane) == nil {
 		return fmt.Errorf("usage: up <metrics|logs|traces|all>")
+	}
+	if len(e.Only) > 0 {
+		return e.upOnly(lane)
 	}
 	fmt.Printf(">> building + starting lane=%s\n", lane)
 	if err := e.compose(lane, "up", "-d", "--build", "--remove-orphans"); err != nil {
@@ -57,6 +82,55 @@ func (e *Env) Up(lane string) error {
 	}
 	fmt.Println(">> Grafana: http://localhost:3000   cAdvisor: http://localhost:8085")
 	return e.compose(lane, "ps")
+}
+
+// upOnly starts only the selected engines and the lane's ingest driver, naming
+// services explicitly so profile-gated services start without pulling in the
+// other engines.
+func (e *Env) upOnly(lane string) error {
+	lanes := []string{"metrics", "logs", "traces"}
+	if lane != "all" {
+		lanes = []string{lane}
+	}
+	set := map[string]bool{}
+	var services []string
+	add := func(name string) {
+		if !set[name] {
+			set[name] = true
+			services = append(services, name)
+		}
+	}
+	for name := range e.Only {
+		add(name)
+		for _, dep := range engineDeps[name] {
+			add(dep)
+		}
+	}
+	for _, l := range lanes {
+		for _, d := range laneDrivers[l] {
+			add(d)
+		}
+	}
+
+	fmt.Printf(">> building + starting only=%v lane=%s services=%v\n", keys(e.Only), lane, services)
+	// No profiles: explicitly named services start regardless of profile gating.
+	args := append(e.composeFiles(), "up", "-d", "--build", "--remove-orphans")
+	args = append(args, services...)
+	cmd := exec.Command("docker", append([]string{"compose"}, args...)...)
+	cmd.Dir = e.Dir
+	cmd.Stdout, cmd.Stderr, cmd.Stdin = os.Stdout, os.Stderr, os.Stdin
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return e.compose(lane, "ps")
+}
+
+func keys(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
 }
 
 // Down stops everything and wipes volumes.
