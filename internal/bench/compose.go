@@ -58,6 +58,7 @@ var laneDrivers = map[string][]string{
 // engineDeps are non-engine services a given engine needs beyond the lane
 // driver. oteldb's file backend is self-contained, so it has none.
 var engineDeps = map[string][]string{
+	"oteldb-s3":  {"fs", "fs-init"},
 	"oteldb-ch":  {"clickhouse-oteldb"},
 	"gigapipe":   {"clickhouse"},
 	"mimir":      {"fs", "fs-init"},

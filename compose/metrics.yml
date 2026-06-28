@@ -28,6 +28,7 @@ services:
       - -promscrape.config=/etc/vmagent/scrape.yml
       - -remoteWrite.url=http://oteldb:19291/api/v1/write
       - -remoteWrite.url=http://oteldb-ch:19291/api/v1/write
+      - -remoteWrite.url=http://oteldb-s3:19291/api/v1/write
       - -remoteWrite.url=http://prometheus:9090/api/v1/write
       - -remoteWrite.url=http://victoriametrics:8428/api/v1/write
       - -remoteWrite.url=http://mimir:9009/api/v1/push
@@ -77,9 +78,11 @@ services:
     ports: ["127.0.0.1:9009:9009"]
 
   # GreptimeDB standalone, object storage on go-faster/fs S3 (bucket: greptimedb).
+  # In [logs]/[traces] too: it ingests the OTLP log/trace streams into otel_logs /
+  # opentelemetry_traces and is queried over SQL (systems.yml, queries/native/greptimedb.yml).
   greptimedb:
-    image: greptime/greptimedb:v0.11.0
-    profiles: [metrics]
+    image: greptime/greptimedb:v1.1.1
+    profiles: [metrics, logs, traces]
     networks: [bench]
     depends_on:
       fs-init: { condition: service_completed_successfully }

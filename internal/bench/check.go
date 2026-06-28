@@ -55,6 +55,11 @@ func (e *Env) Check(signal string) error {
 		if err != nil {
 			return err
 		}
+		// Apples engines use the reference language; a native override only applies
+		// to a system's non-apples signals (see Query).
+		if s.Apples {
+			native = nil
+		}
 		fmt.Printf(">> [%s] checking %s (%s)\n", signal, s.Name, s.Lang)
 		for _, q := range suite.Queries {
 			useLang, text := s.Lang, q.Q
@@ -246,6 +251,19 @@ func resultCount(lang string, body []byte) (int, bool) {
 			}
 		}
 		return n, true
+	case "greptimesql":
+		// GreptimeDB v1 SQL response: {"output":[{"records":{"rows":[[...],...]}}]}.
+		var r struct {
+			Output []struct {
+				Records struct {
+					Rows []json.RawMessage `json:"rows"`
+				} `json:"records"`
+			} `json:"output"`
+		}
+		if err := json.Unmarshal(body, &r); err != nil || len(r.Output) == 0 {
+			return 0, false
+		}
+		return len(r.Output[0].Records.Rows), true
 	}
 	return 0, false
 }

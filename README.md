@@ -159,7 +159,7 @@ emits benchstat output) can be pointed at any `addr` from `systems.yml` — see
   in `queries/native/`; they measure the same retrieval work, not identical
   semantics. Queries with no equivalent report `n/a`.
 - **Datasets.** Metrics are live `node_exporter` series multiplied to 10 hosts by
-  vmagent during a prewarm (`PREWARM` env, default 90s); some engines have PromQL
+  vmagent during a prewarm (`PREWARM` env, default 30s); some engines have PromQL
   dialect gaps (e.g. GreptimeDB rejects `topk` and bare `{__name__=~...}`),
   reported as `ERR`/empty. Logs match
   the loghub suite when `LOGHUB_DIR` is set, else synthetic. Traces are

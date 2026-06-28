@@ -1,0 +1,55 @@
+# GreptimeDB native SQL equivalents of the LogQL (logs) and TraceQL (traces)
+# suites, matched by id. apples=false: same dataset/ingest, not LogQL/TraceQL
+# semantics. One file serves both signals — each suite only looks up its own ids.
+# GreptimeDB ingests the OTLP streams into `otel_logs` and `opentelemetry_traces`
+# and is queried over its SQL HTTP API (GET /v1/sql?sql=...&db=public). Each query
+# self-bounds its window with `now() - INTERVAL` (the suite lookback).
+#
+# Schema (see storage/_ref/greptimedb/src/servers/src/otlp/logs.rs):
+#   timestamp (ns) · severity_text (OTLP SeverityText, title-case "Error"/"Warn")
+#   · severity_number · body (raw log line, FULLTEXT-indexed) · log_attributes
+#   (JSON: http.method, http.status_code) · resource_attributes (JSON).
+# The synthetic stream sets no service.name, so the "service" selector is all rows.
+# Each query self-bounds the window with `now() - INTERVAL '5 minutes'` (the suite
+# lookback), so no start/end is threaded in.
+system: greptimedb
+api: greptimesql
+queries:
+  - id: select_service
+    q: "SELECT body FROM otel_logs WHERE timestamp >= now() - INTERVAL '5 minutes' LIMIT 1000"
+  - id: level_error
+    q: "SELECT body FROM otel_logs WHERE severity_text = 'Error' AND timestamp >= now() - INTERVAL '5 minutes' LIMIT 1000"
+  - id: level_warn
+    q: "SELECT body FROM otel_logs WHERE severity_text = 'Warn' AND timestamp >= now() - INTERVAL '5 minutes' LIMIT 1000"
+  - id: error_token
+    q: "SELECT body FROM otel_logs WHERE severity_text = 'Error' AND body LIKE '%method%' AND timestamp >= now() - INTERVAL '5 minutes' LIMIT 1000"
+  - id: body_get
+    q: "SELECT body FROM otel_logs WHERE body LIKE '%GET%' AND timestamp >= now() - INTERVAL '5 minutes' LIMIT 1000"
+  - id: status_regex
+    q: "SELECT body FROM otel_logs WHERE body LIKE '%\"status\":4%' AND timestamp >= now() - INTERVAL '5 minutes' LIMIT 1000"
+  - id: json_status
+    q: "SELECT body FROM otel_logs WHERE (body LIKE '%\"status\":4%' OR body LIKE '%\"status\":5%') AND timestamp >= now() - INTERVAL '5 minutes' LIMIT 1000"
+  - id: lines_by_level
+    q: "SELECT severity_text, count(*) AS lines FROM otel_logs WHERE timestamp >= now() - INTERVAL '5 minutes' GROUP BY severity_text"
+  - id: rate_by_level
+    q: "SELECT severity_text, count(*) AS lines FROM otel_logs WHERE timestamp >= now() - INTERVAL '5 minutes' GROUP BY severity_text"
+  - id: error_rate
+    q: "SELECT count(*) AS lines FROM otel_logs WHERE severity_text = 'Error' AND timestamp >= now() - INTERVAL '5 minutes'"
+
+  # traces — over opentelemetry_traces, ingested with the built-in greptime_trace_v1
+  # pipeline (GreptimeDB v1.1.x). That flattens spans to columns: service_name,
+  # span_name, duration_nano, parent_span_id, and one column per span attribute
+  # (e.g. "span_attributes.net.peer.ip"). Returns DISTINCT trace_id (LIMIT 20) to
+  # mirror Tempo's trace-level results.
+  - id: by_service
+    q: "SELECT DISTINCT trace_id FROM opentelemetry_traces WHERE service_name = 'frontend' AND timestamp >= now() - INTERVAL '60 minutes' LIMIT 20"
+  - id: any_span
+    q: "SELECT DISTINCT trace_id FROM opentelemetry_traces WHERE timestamp >= now() - INTERVAL '60 minutes' LIMIT 20"
+  - id: by_duration
+    q: "SELECT DISTINCT trace_id FROM opentelemetry_traces WHERE duration_nano > 1000000 AND timestamp >= now() - INTERVAL '60 minutes' LIMIT 20"
+  - id: by_span_name
+    q: "SELECT DISTINCT trace_id FROM opentelemetry_traces WHERE span_name = 'okey-dokey-0' AND timestamp >= now() - INTERVAL '60 minutes' LIMIT 20"
+  - id: by_attr
+    q: "SELECT DISTINCT trace_id FROM opentelemetry_traces WHERE \"span_attributes.net.peer.ip\" <> '' AND timestamp >= now() - INTERVAL '60 minutes' LIMIT 20"
+  - id: structural
+    q: "SELECT DISTINCT t.trace_id FROM opentelemetry_traces t JOIN opentelemetry_traces p ON t.trace_id = p.trace_id AND t.parent_span_id = p.span_id WHERE p.service_name = 'frontend' AND t.timestamp >= now() - INTERVAL '60 minutes' LIMIT 20"

@@ -7,6 +7,7 @@
 
 volumes:
   oteldb-data:
+  oteldb-s3-data:
   clickhouse-data:
   clickhouse-oteldb-data:
 
@@ -37,6 +38,32 @@ services:
       - "127.0.0.1:3200:3200"   # traceql
       - "127.0.0.1:9010:9010"   # pprof
       - "127.0.0.1:19291:19291" # prometheus remote-write ingest
+
+  # oteldb, S3 variant: same image and --embedded, but the embedded storage
+  # engine's object-store backend is the shared go-faster/fs S3 (bucket oteldb-s3),
+  # putting oteldb in the apples-to-apples object-store group. Only the WAL is local.
+  oteldb-s3:
+    image: ${OTELDB_IMAGE:-ghcr.io/oteldb/oteldb:v0.41.0}
+    command: ["--config=/etc/otel/cfg.yml", "--embedded"]
+    networks: [bench]
+    depends_on:
+      fs-init: { condition: service_completed_successfully }
+    volumes:
+      - ../config/oteldb/oteldb-s3.yml:/etc/otel/cfg.yml:ro
+      - oteldb-s3-data:/data
+    environment:
+      - OTEL_LOG_LEVEL=info
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
+      - OTEL_TRACES_EXPORTER=none
+      - PPROF_ADDR=0.0.0.0:9010
+      - GOMAXPROCS=${BENCH_CPUS:-}
+      - GOMEMLIMIT=${BENCH_MEMLIMIT:-}
+    ports:
+      - "127.0.0.1:9093:9090"   # promql
+      - "127.0.0.1:3103:3100"   # logql
+      - "127.0.0.1:3203:3200"   # traceql
+      - "127.0.0.1:9012:9010"   # pprof
 
   # oteldb, ClickHouse-backed variant: same image WITHOUT --embedded, serving all
   # three signals from oteldb's chstorage on a dedicated ClickHouse (so its disk

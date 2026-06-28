@@ -37,6 +37,12 @@ func (e *Env) Query(signal string, count, warmup int) error {
 		if err != nil {
 			return err
 		}
+		// Apples engines speak the signal's reference language directly; ignore any
+		// native override (a system like greptimedb has one only for the signals
+		// where it is non-apples, e.g. SQL over logs/traces — not for PromQL metrics).
+		if sys.Apples {
+			native = nil
+		}
 		fmt.Printf(">> [%s] %s (%s) -> %s\n", signal, sys.Name, sys.Lang, sys.Addr)
 
 		rows := [][]string{{"query_id", "lang", "p50_ms", "p90_ms", "p99_ms", "samples", "errors"}}
@@ -137,6 +143,12 @@ func buildURL(addr, lang, typ, q string, start, end int64, step int) string {
 	}
 	// native dialects key on lang only (type is ignored)
 	switch lang {
+	case "greptimesql":
+		// q is a full SQL statement that self-bounds its time window; GreptimeDB's
+		// SQL HTTP API accepts it as a GET query param.
+		v.Set("sql", q)
+		v.Set("db", "public")
+		return addr + "/v1/sql?" + v.Encode()
 	case "logsql":
 		v.Set("query", q)
 		v.Set("start", strconv.FormatInt(start*1000, 10))
