@@ -17,8 +17,18 @@ exporters:
   otlp/oteldb-ch:
     endpoint: oteldb-ch:4317
     tls: { insecure: true }
+  otlp/oteldb-s3:
+    endpoint: oteldb-s3:4317
+    tls: { insecure: true }
   otlphttp/victorialogs:
     logs_endpoint: http://victorialogs:9428/insert/opentelemetry/v1/logs
+    tls: { insecure: true }
+  otlphttp/greptimedb:
+    # GreptimeDB OTLP logs: default (no pipeline) -> structured table with a
+    # fulltext-indexed `body`, `severity_text`/`severity_number`, and JSON
+    # log/resource attributes. Table selected by the x-greptime-log-table-name header.
+    logs_endpoint: http://greptimedb:4000/v1/otlp/v1/logs
+    headers: { x-greptime-log-table-name: otel_logs }
     tls: { insecure: true }
   loki/loki:
     endpoint: http://loki:3100/loki/api/v1/push
@@ -35,6 +45,8 @@ service:
       exporters:
         - otlp/oteldb
         - otlp/oteldb-ch
+        - otlp/oteldb-s3
         - otlphttp/victorialogs
+        - otlphttp/greptimedb
         - loki/loki
         - loki/gigapipe

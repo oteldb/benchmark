@@ -39,9 +39,9 @@ func (e *Env) otelbench(args ...string) error {
 // node_exporter targets and remote-writes the live stream to every engine from
 // the moment the lane is up. Here we just let data accumulate (current
 // timestamps, in order) so the query window has samples. Duration: PREWARM env
-// (default 90s).
+// (default 30s).
 func (e *Env) ingestMetrics() error {
-	prewarm := 90 * time.Second
+	prewarm := 30 * time.Second
 	if v := os.Getenv("PREWARM"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			prewarm = d

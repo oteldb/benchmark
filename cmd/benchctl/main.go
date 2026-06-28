@@ -54,6 +54,8 @@ func run(args []string) error {
 		return e.Ingest(must(rest, 0, "ingest <metrics|logs|traces>"))
 	case "query":
 		return e.Query(must(rest, 0, "query <metrics|logs|traces> [runs]"), runs(rest, 1, e.Runs), 3)
+	case "check":
+		return e.Check(must(rest, 0, "check <metrics|logs|traces>"))
 	case "collect":
 		return e.Collect()
 	case "report":
@@ -92,6 +94,9 @@ func benchLane(e *bench.Env, lane string, n int) error {
 	if err := e.Query(lane, n, 3); err != nil {
 		return err
 	}
+	if err := e.Check(lane); err != nil {
+		return err
+	}
 	return e.Collect()
 }
 
@@ -101,6 +106,7 @@ func usage() {
   up      [metrics|logs|traces|all]    build + start a lane (default all)
   ingest  <metrics|logs|traces>        push canonical dataset (fan-out)
   query   <metrics|logs|traces> [runs] replay suite against every engine
+  check   <metrics|logs|traces>        verify query results (count vs reference)
   collect                              capture storage + memory footprint
   report                               render results/REPORT.md
   bench   <metrics|logs|traces> [runs] up→ingest→settle→query→collect

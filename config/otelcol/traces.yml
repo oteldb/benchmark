@@ -15,11 +15,23 @@ exporters:
   otlp/oteldb-ch:
     endpoint: oteldb-ch:4317
     tls: { insecure: true }
+  otlp/oteldb-s3:
+    endpoint: oteldb-s3:4317
+    tls: { insecure: true }
   otlp/tempo:
     endpoint: tempo:4317
     tls: { insecure: true }
   otlphttp/victoriatraces:
     traces_endpoint: http://victoriatraces:10428/insert/opentelemetry/v1/traces
+    tls: { insecure: true }
+  otlphttp/greptimedb:
+    # GreptimeDB OTLP traces -> table opentelemetry_traces (columns span_name,
+    # duration_nano, parent_span_id, span_attributes/resource_attributes JSON),
+    # queried via SQL. v1.1.x requires the built-in trace pipeline header.
+    traces_endpoint: http://greptimedb:4000/v1/otlp/v1/traces
+    headers:
+      x-greptime-trace-table-name: opentelemetry_traces
+      x-greptime-pipeline-name: greptime_trace_v1
     tls: { insecure: true }
   otlp/gigapipe:
     endpoint: gigapipe:4317
@@ -33,6 +45,8 @@ service:
       exporters:
         - otlp/oteldb
         - otlp/oteldb-ch
+        - otlp/oteldb-s3
         - otlp/tempo
         - otlphttp/victoriatraces
+        - otlphttp/greptimedb
         - otlp/gigapipe

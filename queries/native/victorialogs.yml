@@ -1,27 +1,32 @@
 # VictoriaLogs native LogsQL equivalents of logs.logql.yml (matched by id).
 # apples=false: same dataset/ingest, not LogQL semantics. Queried via
-# GET /select/logsql/query. Field names follow VictoriaLogs' OTLP mapping
-# (service.name -> service.name, severity -> level via the log record).
+# GET /select/logsql/query.
+#
+# Field names follow VictoriaLogs' OTLP mapping (verified against the live schema):
+#   _msg = log body · severity = OTLP SeverityText (title-case "Error"/"Warn")
+#   · http.method · http.status_code · otelbench.resource.
+# Note there is NO service.name (the synthetic stream sets none), so the "service"
+# selector matches every line (`*`), and the level field is `severity`, not `level`.
 system: victorialogs
 api: logsql
 queries:
   - id: select_service
-    q: 'service.name:="unknown_service"'
+    q: '*'
   - id: level_error
-    q: 'level:=ERROR'
+    q: 'severity:=Error'
   - id: level_warn
-    q: 'level:=WARN'
+    q: 'severity:=Warn'
   - id: error_token
-    q: 'level:=ERROR AND "method"'
+    q: 'severity:=Error AND "method"'
   - id: body_get
     q: '"GET"'
   - id: status_regex
     q: '_msg:~"\"status\":4[0-9][0-9]"'
   - id: json_status
-    q: '_msg:~"\"status\":4[0-9][0-9]"'
+    q: '_msg:~"\"status\":[45][0-9][0-9]"'
   - id: lines_by_level
-    q: '* | stats by (level) count() lines'
+    q: '* | stats by (severity) count() lines'
   - id: rate_by_level
-    q: '* | stats by (level) count() lines'
+    q: '* | stats by (severity) count() lines'
   - id: error_rate
-    q: 'level:=ERROR | stats count() lines'
+    q: 'severity:=Error | stats count() lines'
