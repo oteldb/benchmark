@@ -9,6 +9,11 @@ storage:
   # Parallelize LogQL result materialization across workers (default 1 =
   # sequential). Lets LogQL queries use multiple cores like Loki/qryn do.
   log_query_parallelism: 8
+  # Run the background flush/compaction loop. Without this (FlushInterval=0) the
+  # engine never starts runMaintenance, so the head and WAL grow unbounded in RAM
+  # (the whole ingested dataset stays resident, and a restart replays the entire
+  # WAL into memory). Periodic flush bounds head/WAL size — and thus RSS.
+  flush_interval: 10s
 
 prometheus:                     # PromQL HTTP API (Prometheus-compatible)
   bind: 0.0.0.0:9090
