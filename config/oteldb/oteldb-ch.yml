@@ -1,0 +1,45 @@
+# oteldb under test, ClickHouse-backed variant. Same binary and same three query
+# APIs as the embedded variant (config/oteldb/oteldb.yml), but WITHOUT --embedded:
+# every signal is served from oteldb's original ClickHouse storage (chstorage)
+# instead of the go-faster/storage engine. This benches oteldb's columnar layout
+# on ClickHouse against the embedded engine on the same dataset/hardware/ingest.
+#
+# Points at a DEDICATED clickhouse-oteldb server (not gigapipe's) so the on-disk
+# footprint is attributable to oteldb alone. `dsn` is the query side; the otelcol
+# oteldbexporter dsn is the write side — both must name the same ClickHouse.
+dsn: clickhouse://default:default@clickhouse-oteldb:9000
+
+prometheus:                     # PromQL HTTP API (Prometheus-compatible)
+  bind: 0.0.0.0:9090
+  max_samples: 1_000_000
+  timeout: 1m
+  enable_negative_offset: true
+loki:                           # LogQL HTTP API (Loki-compatible)
+  bind: 0.0.0.0:3100
+tempo:                          # TraceQL HTTP API (Tempo-compatible)
+  bind: 0.0.0.0:3200
+health_check:
+  bind: 0.0.0.0:13133
+
+# Ingest receivers: Prometheus remote-write for metrics, OTLP for logs + traces
+# (fanned out by config/otelcol/{logs,traces}.yml). The oteldbexporter writes to
+# ClickHouse via the dsn below.
+otelcol:
+  receivers:
+    prometheusremotewrite:
+      endpoint: 0.0.0.0:19291
+      time_threshold: 100000h
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  exporters:
+    oteldbexporter:
+      dsn: clickhouse://default:default@clickhouse-oteldb:9000
+  service:
+    pipelines:
+      metrics: { receivers: [prometheusremotewrite], exporters: [oteldbexporter] }
+      logs:    { receivers: [otlp], exporters: [oteldbexporter] }
+      traces:  { receivers: [otlp], exporters: [oteldbexporter] }

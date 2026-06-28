@@ -8,6 +8,7 @@
 volumes:
   oteldb-data:
   clickhouse-data:
+  clickhouse-oteldb-data:
 
 services:
   oteldb:
@@ -36,6 +37,46 @@ services:
       - "127.0.0.1:3200:3200"   # traceql
       - "127.0.0.1:9010:9010"   # pprof
       - "127.0.0.1:19291:19291" # prometheus remote-write ingest
+
+  # oteldb, ClickHouse-backed variant: same image WITHOUT --embedded, serving all
+  # three signals from oteldb's chstorage on a dedicated ClickHouse (so its disk
+  # footprint is isolated from gigapipe's). Distinct host ports from the embedded
+  # oteldb; internal ports are identical (separate container).
+  oteldb-ch:
+    image: ${OTELDB_IMAGE:-ghcr.io/oteldb/oteldb:v0.41.0}
+    command: ["--config=/etc/otel/cfg.yml"]
+    networks: [bench]
+    depends_on:
+      clickhouse-oteldb: { condition: service_healthy }
+    volumes:
+      - ../config/oteldb/oteldb-ch.yml:/etc/otel/cfg.yml:ro
+    environment:
+      - OTEL_LOG_LEVEL=info
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
+      - OTEL_TRACES_EXPORTER=none
+      - PPROF_ADDR=0.0.0.0:9010
+      - GOMAXPROCS=${BENCH_CPUS:-}
+      - GOMEMLIMIT=${BENCH_MEMLIMIT:-}
+    ports:
+      - "127.0.0.1:9092:9090"   # promql
+      - "127.0.0.1:3102:3100"   # logql
+      - "127.0.0.1:3202:3200"   # traceql
+      - "127.0.0.1:9011:9010"   # pprof
+
+  # Dedicated ClickHouse for the oteldb-ch variant (separate from gigapipe's).
+  clickhouse-oteldb:
+    image: clickhouse/clickhouse-server:25.9
+    networks: [bench]
+    environment:
+      - CLICKHOUSE_PASSWORD=default
+    volumes:
+      - clickhouse-oteldb-data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "127.0.0.1:8123/ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
 
   # gigapipe/qryn — Loki+Prometheus+Tempo APIs over ClickHouse.
   clickhouse:

@@ -7,9 +7,15 @@ languages:
 
 | Signal  | Reference language | Systems under test |
 |---------|--------------------|--------------------|
-| Metrics | **PromQL**  | oteldb · Prometheus · VictoriaMetrics · Mimir · GreptimeDB · gigapipe |
-| Logs    | **LogQL**   | oteldb · Loki · VictoriaLogs\* · gigapipe |
-| Traces  | **TraceQL** | oteldb · Tempo · VictoriaTraces\* · gigapipe |
+| Metrics | **PromQL**  | oteldb · oteldb-ch · Prometheus · VictoriaMetrics · Mimir · GreptimeDB · gigapipe |
+| Logs    | **LogQL**   | oteldb · oteldb-ch · Loki · VictoriaLogs\* · gigapipe |
+| Traces  | **TraceQL** | oteldb · oteldb-ch · Tempo · VictoriaTraces\* · gigapipe |
+
+**oteldb** is benched in two configurations from the *same binary*: `oteldb` is
+the embedded go-faster/storage engine (`--embedded`, `file` backend), and
+`oteldb-ch` serves the same three query APIs from oteldb's original ClickHouse
+storage (chstorage) on a dedicated `clickhouse-oteldb` server. Identical query
+semantics and ingest path — the comparison isolates the storage layer.
 
 \* VictoriaLogs and VictoriaTraces do not implement LogQL/TraceQL; they are
 benched on their native dialect (LogsQL / Jaeger query) over the *same dataset
@@ -107,6 +113,16 @@ go build -o benchctl ./cmd/benchctl && ./benchctl bench-all
 ./benchctl query metrics 20     # 20 runs/query after warmup
 ./benchctl collect
 ./benchctl report
+```
+
+**Faster feedback — only some engines.** `--only <csv>` (or `BENCH_ONLY` in
+`.env`) restricts a run to a subset of systems: it brings up just those engines
+plus the lane's ingest driver (skipping the competitors entirely) and
+queries/collects/reports only them.
+
+```bash
+./benchctl --only oteldb bench-all            # just the embedded engine
+./benchctl --only oteldb,oteldb-ch bench-all  # embedded vs ClickHouse, head-to-head
 ```
 
 Live dashboards while it runs: **Grafana** http://localhost:3000 (every engine

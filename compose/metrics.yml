@@ -27,6 +27,7 @@ services:
     command:
       - -promscrape.config=/etc/vmagent/scrape.yml
       - -remoteWrite.url=http://oteldb:19291/api/v1/write
+      - -remoteWrite.url=http://oteldb-ch:19291/api/v1/write
       - -remoteWrite.url=http://prometheus:9090/api/v1/write
       - -remoteWrite.url=http://victoriametrics:8428/api/v1/write
       - -remoteWrite.url=http://mimir:9009/api/v1/push

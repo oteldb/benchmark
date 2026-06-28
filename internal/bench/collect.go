@@ -26,7 +26,7 @@ func (e *Env) Collect() error {
 
 	seen := map[string]bool{}
 	for _, signal := range []string{"metrics", "logs", "traces"} {
-		for _, sys := range systems.For(signal) {
+		for _, sys := range e.selected(systems.For(signal)) {
 			if seen[sys.Name] {
 				continue
 			}
@@ -39,7 +39,11 @@ func (e *Env) Collect() error {
 			case "local":
 				disk = volBytes(sys.Name + "-data")
 			case "clickhouse":
-				disk = volBytes("clickhouse-data")
+				vol := sys.Volume
+				if vol == "" {
+					vol = "clickhouse-data"
+				}
+				disk = volBytes(vol)
 			}
 			mem := memMB(sys.Name)
 			rows = append(rows, []string{sys.Name, sys.Storage, strconv.FormatInt(disk, 10), strconv.FormatInt(mem, 10)})

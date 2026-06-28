@@ -16,10 +16,11 @@ import (
 
 // Env holds resolved paths and .env-derived settings shared by every command.
 type Env struct {
-	Dir       string // benchmark root (holds systems.yml, compose/, config/, ...)
-	OteldbSrc string // sibling oteldb checkout used to run otelbench during ingest
-	Runs      int    // benchmark runs per query (after warmup)
-	LoghubDir string // optional dir of loghub .log files for the LogQL suite
+	Dir       string          // benchmark root (holds systems.yml, compose/, config/, ...)
+	OteldbSrc string          // sibling oteldb checkout used to run otelbench during ingest
+	Runs      int             // benchmark runs per query (after warmup)
+	LoghubDir string          // optional dir of loghub .log files for the LogQL suite
+	Only      map[string]bool // if non-empty, restrict the run to these systems (e.g. {"oteldb"})
 }
 
 // LoadEnv finds the benchmark root (the dir containing systems.yml, walking up
@@ -52,7 +53,36 @@ func LoadEnv() (*Env, error) {
 		fmt.Sscanf(v, "%d", &e.Runs)
 	}
 	e.LoghubDir = get("LOGHUB_DIR", "")
+	e.Only = ParseOnly(get("BENCH_ONLY", ""))
 	return e, nil
+}
+
+// ParseOnly turns a comma-separated system list into a set (empty == all
+// systems). Used by the --only flag and the BENCH_ONLY env var to restrict a
+// run to a subset of engines (e.g. just oteldb) for a faster feedback loop.
+func ParseOnly(csv string) map[string]bool {
+	set := map[string]bool{}
+	for _, name := range strings.Split(csv, ",") {
+		if name = strings.TrimSpace(name); name != "" {
+			set[name] = true
+		}
+	}
+	return set
+}
+
+// selected filters a signal's systems to the Only set, preserving order. With no
+// Only set it returns the list unchanged.
+func (e *Env) selected(list []System) []System {
+	if len(e.Only) == 0 {
+		return list
+	}
+	out := list[:0:0]
+	for _, s := range list {
+		if e.Only[s.Name] {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 func findRoot() (string, error) {
@@ -101,6 +131,11 @@ type System struct {
 	Lang    string `yaml:"lang"`
 	Apples  bool   `yaml:"apples"`
 	Storage string `yaml:"storage"`
+	// Volume overrides the named docker volume measured for the on-disk
+	// footprint. Defaults to "<name>-data"; set it when a system stores data in a
+	// differently-named volume (e.g. the clickhouse-backed oteldb-ch variant uses
+	// its dedicated clickhouse-oteldb-data volume, not gigapipe's clickhouse-data).
+	Volume string `yaml:"volume"`
 }
 
 // Systems is the parsed matrix, preserving file order within each signal so the

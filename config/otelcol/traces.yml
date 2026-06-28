@@ -12,6 +12,9 @@ exporters:
   otlp/oteldb:
     endpoint: oteldb:4317
     tls: { insecure: true }
+  otlp/oteldb-ch:
+    endpoint: oteldb-ch:4317
+    tls: { insecure: true }
   otlp/tempo:
     endpoint: tempo:4317
     tls: { insecure: true }
@@ -29,6 +32,7 @@ service:
       processors: [batch]
       exporters:
         - otlp/oteldb
+        - otlp/oteldb-ch
         - otlp/tempo
         - otlphttp/victoriatraces
         - otlp/gigapipe

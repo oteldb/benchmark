@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/oteldb/benchmark/internal/bench"
@@ -31,6 +32,7 @@ func main() {
 }
 
 func run(args []string) error {
+	args, only := stripOnly(args)
 	if len(args) == 0 {
 		usage()
 		return nil
@@ -38,6 +40,9 @@ func run(args []string) error {
 	e, err := bench.LoadEnv()
 	if err != nil {
 		return err
+	}
+	if only != "" {
+		e.Only = bench.ParseOnly(only)
 	}
 	cmd, rest := args[0], args[1:]
 	switch cmd {
@@ -101,7 +106,34 @@ func usage() {
   bench   <metrics|logs|traces> [runs] up→ingest→settle→query→collect
   bench-all [runs]                     all lanes, then report
   down                                 stop + wipe volumes
+
+global flags:
+  --only <csv>   restrict the run to these engines (e.g. --only oteldb) for a
+                 faster feedback loop: brings up only those engines + the lane's
+                 ingest driver, and queries/collects/reports just them. Also set
+                 via BENCH_ONLY in .env.
 `)
+}
+
+// stripOnly extracts a global `--only <csv>` / `--only=<csv>` flag from anywhere
+// in args (last value wins) and returns the remaining args plus the value. It
+// restricts the run to a subset of engines — e.g. `--only oteldb` for a fast
+// oteldb-only feedback loop. Empty when the flag is absent.
+func stripOnly(args []string) (rest []string, only string) {
+	for i := 0; i < len(args); i++ {
+		switch a := args[i]; {
+		case a == "--only":
+			if i+1 < len(args) {
+				only = args[i+1]
+				i++
+			}
+		case strings.HasPrefix(a, "--only="):
+			only = strings.TrimPrefix(a, "--only=")
+		default:
+			rest = append(rest, a)
+		}
+	}
+	return rest, only
 }
 
 func arg(a []string, i int, def string) string {

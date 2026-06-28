@@ -36,7 +36,7 @@ func (e *Env) Report() error {
 		// Engines with a results file, in matrix order.
 		var cols []System
 		p90 := map[string]map[string]string{} // system -> id -> p90
-		for _, sys := range systems.For(signal) {
+		for _, sys := range e.selected(systems.For(signal)) {
 			data, ok := readP90(filepath.Join(dir, sys.Name+".csv"))
 			if !ok {
 				continue

@@ -4,6 +4,7 @@
 .idea/
 results/*/
 results/*.csv
+results/*.log
 results/REPORT.md
 !results/.gitkeep
 !results/pprof/

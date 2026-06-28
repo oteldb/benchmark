@@ -17,6 +17,7 @@
 
 metrics:                         # reference language: PromQL (Prometheus HTTP API /api/v1)
   oteldb:          { addr: http://127.0.0.1:9090,                 lang: promql, apples: true,  storage: local }
+  oteldb-ch:       { addr: http://127.0.0.1:9092,                 lang: promql, apples: true,  storage: clickhouse, volume: clickhouse-oteldb-data }
   prometheus:      { addr: http://127.0.0.1:9091,                 lang: promql, apples: true,  storage: local }
   victoriametrics: { addr: http://127.0.0.1:8428/prometheus,      lang: promql, apples: true,  storage: local }
   mimir:           { addr: http://127.0.0.1:9009/prometheus,      lang: promql, apples: true,  storage: fs }
@@ -25,12 +26,14 @@ metrics:                         # reference language: PromQL (Prometheus HTTP A
 
 logs:                            # reference language: LogQL (Loki HTTP API /loki/api/v1)
   oteldb:          { addr: http://127.0.0.1:3100,  lang: logql,  apples: true,  storage: local }
+  oteldb-ch:       { addr: http://127.0.0.1:3102,  lang: logql,  apples: true,  storage: clickhouse, volume: clickhouse-oteldb-data }
   loki:            { addr: http://127.0.0.1:3101,  lang: logql,  apples: true,  storage: fs }
   victorialogs:    { addr: http://127.0.0.1:9428,  lang: logsql, apples: false, storage: local }   # native LogsQL
   gigapipe:        { addr: http://127.0.0.1:3110,  lang: logql,  apples: true,  storage: clickhouse }
 
 traces:                          # reference language: TraceQL (Tempo HTTP API /api/search)
   oteldb:          { addr: http://127.0.0.1:3200,   lang: traceql, apples: true,  storage: local }
+  oteldb-ch:       { addr: http://127.0.0.1:3202,   lang: traceql, apples: true,  storage: clickhouse, volume: clickhouse-oteldb-data }
   tempo:           { addr: http://127.0.0.1:3201,   lang: traceql, apples: true,  storage: fs }
   victoriatraces:  { addr: http://127.0.0.1:10428,  lang: native,  apples: false, storage: local }  # Jaeger query API
   gigapipe:        { addr: http://127.0.0.1:3110,   lang: traceql, apples: true,  storage: clickhouse }
