@@ -1,0 +1,34 @@
+File: oteldb
+Build ID: 7686d6e8bfd320c8a803c81fd104a71b00e60e94
+Type: cpu
+Time: 2026-06-29 10:26:54 MSK
+Duration: 25s, Total samples = 74.43s (297.71%)
+Showing nodes accounting for 61.13s, 82.13% of 74.43s total
+Dropped 798 nodes (cum <= 0.37s)
+Showing top 25 nodes out of 171
+      flat  flat%   sum%        cum   cum%
+    18.08s 24.29% 24.29%     26.62s 35.77%  runtime.scanObject
+     4.21s  5.66% 29.95%      4.21s  5.66%  runtime.spanClass.sizeclass (inline)
+     3.54s  4.76% 34.70%      3.54s  4.76%  runtime.memclrNoHeapPointers
+     3.40s  4.57% 39.27%      8.50s 11.42%  runtime.scanObjectsSmall
+     2.80s  3.76% 43.03%      7.87s 10.57%  runtime.tryDeferToSpanScan
+     2.52s  3.39% 46.42%      2.52s  3.39%  internal/runtime/syscall/linux.Syscall6
+     2.45s  3.29% 49.71%     10.21s 13.72%  github.com/oteldb/storage/encoding/chunk.DecodeFloats
+     2.45s  3.29% 53.00%      2.75s  3.69%  runtime.findObject
+     2.41s  3.24% 56.24%      2.41s  3.24%  runtime.memmove
+     2.24s  3.01% 59.25%      3.02s  4.06%  github.com/oteldb/storage/encoding/chunk.xorReadControl
+     2.20s  2.96% 62.21%      3.22s  4.33%  github.com/oteldb/storage/encoding/chunk.readDoDPrefix
+     2.12s  2.85% 65.05%      8.79s 11.81%  github.com/oteldb/storage/encoding/chunk.DecodeTimestamps
+     1.94s  2.61% 67.66%     39.98s 53.71%  runtime.gcDrain
+     1.75s  2.35% 70.01%      6.23s  8.37%  github.com/oteldb/storage/encoding/chunk.xorRead
+     1.60s  2.15% 72.16%      2.56s  3.44%  github.com/oteldb/storage/encoding/bitstream.(*Reader).ReadBits
+     1.11s  1.49% 73.65%      1.11s  1.49%  github.com/oteldb/storage/encoding/bitstream.(*Reader).Peek (inline)
+     1.09s  1.46% 75.12%      5.40s  7.26%  github.com/oteldb/storage/encoding/chunk.readDoD
+     1.07s  1.44% 76.56%      1.07s  1.44%  runtime.(*lfstack).pop
+     0.73s  0.98% 77.54%      0.86s  1.16%  runtime.typePointers.next
+     0.65s  0.87% 78.41%      0.73s  0.98%  runtime.heapArenaOf (inline)
+     0.63s  0.85% 79.26%      1.05s  1.41%  github.com/oteldb/storage/encoding/bitstream.(*Reader).loadNextBuffer
+     0.63s  0.85% 80.10%      0.63s  0.85%  runtime.extractHeapBitsSmall
+     0.54s  0.73% 80.83%      0.54s  0.73%  runtime.madvise
+     0.53s  0.71% 81.54%      0.53s  0.71%  runtime.(*mspan).markBitsForIndex (inline)
+     0.44s  0.59% 82.13%      0.55s  0.74%  github.com/oteldb/storage/encoding/bitstream.(*Reader).ReadBit

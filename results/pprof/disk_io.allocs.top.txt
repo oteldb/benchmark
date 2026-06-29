@@ -1,0 +1,33 @@
+File: oteldb
+Build ID: 7686d6e8bfd320c8a803c81fd104a71b00e60e94
+Type: alloc_space
+Time: 2026-06-29 10:26:51 MSK
+Showing nodes accounting for 61891.84MB, 92.35% of 67016.90MB total
+Dropped 355 nodes (cum <= 335.08MB)
+Showing top 25 nodes out of 113
+      flat  flat%   sum%        cum   cum%
+18954.21MB 28.28% 28.28% 18954.21MB 28.28%  github.com/oteldb/storage/encoding/chunk.resize[go.shape.float64] (inline)
+18954.21MB 28.28% 56.57% 18954.21MB 28.28%  github.com/oteldb/storage/encoding/chunk.resize[go.shape.int64] (inline)
+ 7625.63MB 11.38% 67.94%  7625.63MB 11.38%  slices.Clone[go.shape.[]uint8,go.shape.uint8] (inline)
+ 7398.09MB 11.04% 78.98%  7398.09MB 11.04%  github.com/oteldb/storage/encoding/compress.(*Compressor).Decompress
+ 2526.77MB  3.77% 82.75%  2526.77MB  3.77%  github.com/oteldb/storage/engine.(*flushColumns).appendRow (inline)
+ 1743.76MB  2.60% 85.36%  1743.76MB  2.60%  github.com/oteldb/oteldb/internal/prompb.(*slicepool[go.shape.struct { Name []uint8; Value []uint8 }]).Push (inline)
+  781.09MB  1.17% 86.52%   930.09MB  1.39%  go.opentelemetry.io/collector/pdata/pcommon.Map.PutStr
+  751.70MB  1.12% 87.64%   923.70MB  1.38%  github.com/oteldb/storage/otlp/pdataconv.convertMap
+  682.86MB  1.02% 88.66%   682.86MB  1.02%  github.com/oteldb/storage/signal/metric.grow[go.shape.struct { Name []uint8; Unit []uint8; Kind github.com/oteldb/storage/signal/metric.PointKind; Temporality github.com/oteldb/storage/signal/metric.Temporality; Monotonic bool; Points []github.com/oteldb/storage/signal/metric.NumberPoint }] (inline)
+  630.09MB  0.94% 89.60%   630.09MB  0.94%  github.com/valyala/bytebufferpool.(*ByteBuffer).ReadFrom
+  558.15MB  0.83% 90.43%   894.61MB  1.33%  github.com/oteldb/storage/engine.encodeSeriesSet.func1
+  507.20MB  0.76% 91.19%  2350.58MB  3.51%  github.com/oteldb/oteldb/internal/prompb.(*WriteRequest).Unmarshal
+  365.48MB  0.55% 91.74%   365.48MB  0.55%  github.com/oteldb/promql-engine/ringbuffer.(*GenericRingBuffer).Push
+     110MB  0.16% 91.90%  1920.11MB  2.87%  github.com/oteldb/oteldb/prometheusremotewrite.FromTimeSeries
+  107.50MB  0.16% 92.06%  1851.58MB  2.76%  github.com/oteldb/storage/otlp/pdataconv.appendMetric
+   68.96MB   0.1% 92.16%   357.98MB  0.53%  go.opentelemetry.io/collector/pdata/pmetric.MetricSlice.AppendEmpty
+   58.52MB 0.087% 92.25% 27496.36MB 41.03%  github.com/oteldb/storage/engine.(*Engine).Fetch
+   21.04MB 0.031% 92.28% 27689.97MB 41.32%  github.com/oteldb/promql-engine/storage/prometheus.(*matrixSelector).loadSeries.func1
+   13.65MB  0.02% 92.30% 27565.35MB 41.13%  github.com/oteldb/promql-engine/storage/prometheus.(*seriesSelector).loadSeries
+   13.23MB  0.02% 92.32% 27551.70MB 41.11%  github.com/oteldb/storage/query/promql.(*querier).Select
+    9.16MB 0.014% 92.34%   587.07MB  0.88%  github.com/oteldb/storage/engine.buildFlushColumns
+    7.03MB  0.01% 92.35% 27575.92MB 41.15%  github.com/oteldb/promql-engine/storage/prometheus.(*filteredSelector).loadSeries
+    1.50MB 0.0022% 92.35%   384.14MB  0.57%  main.addOgen[go.shape.struct { github.com/oteldb/oteldb/internal/promapi.name string; github.com/oteldb/oteldb/internal/promapi.summary string; github.com/oteldb/oteldb/internal/promapi.operationID string; github.com/oteldb/oteldb/internal/promapi.operationGroup string; github.com/oteldb/oteldb/internal/promapi.pathPattern string; github.com/oteldb/oteldb/internal/promapi.count int; github.com/oteldb/oteldb/internal/promapi.args [1]string },go.shape.*uint8].func1.LogRequests.8.1
+       1MB 0.0015% 92.35%   377.62MB  0.56%  github.com/oteldb/oteldb/internal/promapi.(*Server).handleGetQueryRangeRequest
+       1MB 0.0015% 92.35%  7717.10MB 11.52%  net/http.(*conn).serve

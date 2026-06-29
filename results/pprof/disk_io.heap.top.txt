@@ -1,0 +1,33 @@
+File: oteldb
+Build ID: 7686d6e8bfd320c8a803c81fd104a71b00e60e94
+Type: inuse_space
+Time: 2026-06-29 10:27:19 MSK
+Showing nodes accounting for 372.32MB, 97.21% of 383.01MB total
+Dropped 103 nodes (cum <= 1.92MB)
+Showing top 25 nodes out of 111
+      flat  flat%   sum%        cum   cum%
+   89.56MB 23.38% 23.38%    90.07MB 23.52%  github.com/oteldb/storage/signal.Attributes.Intern
+   74.35MB 19.41% 42.80%    74.35MB 19.41%  slices.Clone[go.shape.[]uint8,go.shape.uint8]
+   56.07MB 14.64% 57.44%    56.07MB 14.64%  github.com/oteldb/storage/encoding/chunk.resize[go.shape.int64] (inline)
+   43.37MB 11.32% 68.76%    43.37MB 11.32%  github.com/oteldb/storage/index/postings.(*MemPostings).Add (inline)
+   32.17MB  8.40% 77.16%   122.24MB 31.92%  github.com/oteldb/storage/index/series.(*Index).Add
+   19.22MB  5.02% 82.18%   194.33MB 50.74%  github.com/oteldb/storage/engine.(*head).appendByID
+   13.74MB  3.59% 85.77%    13.74MB  3.59%  github.com/oteldb/storage/engine.buildPartIndex
+   11.25MB  2.94% 88.70%    11.25MB  2.94%  github.com/oteldb/storage/encoding/chunk.resize[go.shape.float64] (inline)
+    9.50MB  2.48% 91.18%     9.50MB  2.48%  github.com/oteldb/storage/engine.(*sampleBuf).appendSample (inline)
+    7.44MB  1.94% 93.13%     7.44MB  1.94%  github.com/oteldb/oteldb/internal/prompb.(*slicepool[go.shape.struct { Name []uint8; Value []uint8 }]).Push (inline)
+    6.02MB  1.57% 94.70%     6.02MB  1.57%  runtime.mallocgc
+    5.47MB  1.43% 96.13%     5.47MB  1.43%  github.com/oteldb/storage/encoding/compress.(*Compressor).Decompress
+    2.37MB  0.62% 96.75%     2.37MB  0.62%  github.com/valyala/bytebufferpool.(*ByteBuffer).ReadFrom
+    1.78MB  0.46% 97.21%     9.22MB  2.41%  github.com/oteldb/oteldb/internal/prompb.(*WriteRequest).Unmarshal
+         0     0% 97.21%     7.44MB  1.94%  github.com/oteldb/oteldb/internal/prompb.(*TimeSeries).Unmarshal
+         0     0% 97.21%   196.37MB 51.27%  github.com/oteldb/oteldb/internal/storagebackend.(*Backend).ConsumeMetrics
+         0     0% 97.21%   207.97MB 54.30%  github.com/oteldb/oteldb/otelcolmod/prometheusremotewritereceiver.(*Receiver).ServeHTTP
+         0     0% 97.21%    11.60MB  3.03%  github.com/oteldb/oteldb/prometheusremotewrite.DecodeRequest
+         0     0% 97.21%    11.60MB  3.03%  github.com/oteldb/oteldb/prometheusremotewrite.decodeRequest
+         0     0% 97.21%    22.50MB  5.87%  github.com/oteldb/promql-engine/execution/exchange.(*coalesce).loadSeries.func1
+         0     0% 97.21%    22.50MB  5.87%  github.com/oteldb/promql-engine/execution/exchange.(*concurrencyOperator).Series
+         0     0% 97.21%    22.50MB  5.87%  github.com/oteldb/promql-engine/execution/telemetry.(*Operator).Series
+         0     0% 97.21%    22.50MB  5.87%  github.com/oteldb/promql-engine/storage/prometheus.(*filteredSelector).GetSeries
+         0     0% 97.21%    22.50MB  5.87%  github.com/oteldb/promql-engine/storage/prometheus.(*filteredSelector).GetSeries.func1
+         0     0% 97.21%    22.50MB  5.87%  github.com/oteldb/promql-engine/storage/prometheus.(*filteredSelector).loadSeries
